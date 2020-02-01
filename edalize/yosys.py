@@ -78,4 +78,3 @@ class Yosys(Edatool):
         self.render_template('yosys-makefile.j2',
                              makefile_name,
                              template_vars)
-
