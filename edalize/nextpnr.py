@@ -68,7 +68,7 @@ class Nextpnr(Edatool):
         (src_files, incdirs) = self._get_fileset_files()
 
         yosys_synth_options = self.tool_options.get('yosys_synth_options', '')
-        yosys_additional_commands = self.tool_options.get('yosys_additional_commands', '')
+        yosys_additional_tcl_file = self.tool_options.get('yosys_additional_tcl_file', '')
         yosys_edam = {
                 'files'         : self.files,
                 'name'          : self.name,
@@ -77,7 +77,7 @@ class Nextpnr(Edatool):
                 'tool_options'  : {'yosys' : {
                                         'arch' : 'xilinx',
                                         'yosys_synth_options' : yosys_synth_options,
-                                        'yosys_additional_commands' : yosys_additional_commands,
+                                        'yosys_additional_tcl_file' : yosys_additional_tcl_file,
                                         'yosys_as_subtool' : True,
                                         }
                                 }

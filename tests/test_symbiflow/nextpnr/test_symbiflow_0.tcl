@@ -1,23 +1,17 @@
 yosys -import
 
-{% if verilog_defines -%}
-set defines {{ verilog_defines }}
+set defines {}
 
 foreach d ${defines} {
   set key [lindex $d 0]
   set val [lindex $d 1]
   verilog_defines "-D$key=$val"
 }
-{%- endif %}
-
 verilog_defaults -push
 verilog_defaults -add -defer
 
-{% if incdirs -%}
-verilog_defaults -add {{ incdirs }}
-{%- endif %}
 
-set file_table {{ file_table }}
+set file_table {}
 
 foreach f ${file_table} {
   set file_path [lindex $f 0]
@@ -34,16 +28,11 @@ foreach f ${file_table} {
   }
 }
 
-{% if verilog_params -%}
-{{ verilog_params }}
-{%- endif %}
 
 verilog_defaults -pop
 
-{{ synth_command }} {{ synth_options }} -top {{ top }}
-{% if additional_tcl_file %}
-source {{ additional_tcl_file }}
-{% endif %}
-write_blif {{ name }}.blif
-write_json {{ name }}.json
-write_edif {{ edif_opts }} {{ name }}.edif
+synth_xilinx  -top top_module
+source test_symbiflow/additional.tcl
+write_blif test_symbiflow_0.blif
+write_json test_symbiflow_0.json
+write_edif -pvector bra test_symbiflow_0.edif

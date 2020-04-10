@@ -31,6 +31,9 @@ class Yosys(Edatool):
                         {'name' : 'yosys_synth_options',
                          'type' : 'String',
                          'desc' : 'Additional options for the synth command'},
+                        {'name' : 'yosys_additional_tcl_file',
+                         'type' : 'String',
+                         'desc' : 'Path to tcl file containing additional commands for the yosys script'},
                         ]}
 
     def configure_main(self):
@@ -79,6 +82,7 @@ class Yosys(Edatool):
                 'top'                 : self.toplevel,
                 'synth_command'       : "synth_" + arch,
                 'synth_options'       : " ".join(self.tool_options.get('yosys_synth_options', '')),
+                'additional_tcl_file' : self.tool_options.get('yosys_additional_tcl_file', []),
                 'write_command'       : "write_" + output_format,
                 'default_target'      : output_format,
                 'edif_opts'           : '-pvector bra' if arch=='xilinx' else '',

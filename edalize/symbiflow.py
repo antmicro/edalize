@@ -48,7 +48,7 @@ class Symbiflow(Edatool):
                     {
                         "name": "pnr",
                         "type": "String",
-                        "desc": 'Place and Route tool. Currently only "vpr" is supported',
+                        "desc": 'Place and Route tool. Currently only "vpr" and "nextpnr" are supported',
                     },
                     {
                         "name": "additional_vpr_options",
@@ -67,6 +67,64 @@ class Symbiflow(Edatool):
 
     def get_version(self):
         return "1.0"
+
+    def configure_nextpnr(self):
+        (src_files, incdirs) = self._get_fileset_files(force_slash=True)
+
+        yosys_synth_options = self.tool_options.get('yosys_synth_options', '')
+        yosys_additional_tcl_file = self.tool_options.get('yosys_additional_tcl_file', '')
+        nextpnr_edam = {
+                'files'         : self.files,
+                'name'          : self.name,
+                'toplevel'      : self.toplevel,
+                'tool_options'  : {
+                        'nextpnr' : {
+                            'arch' : 'xilinx',
+                            'yosys_synth_options' : yosys_synth_options,
+                            'yosys_additional_tcl_file' : yosys_additional_tcl_file,
+                            'nextpnr_as_subtool' : True,
+                            }
+                        }
+        }
+
+        nextpnr = getattr(import_module("edalize.nextpnr"), 'Nextpnr')(nextpnr_edam, self.work_root)
+        nextpnr.configure()
+
+        part = self.tool_options.get('part', None)
+        package = self.tool_options.get('package', None)
+
+        if part is None:
+            logger.error('Missing required "part" parameter')
+        if package is None:
+            logger.error('Missing required "package" parameter')
+
+        partname = part + package
+
+        if 'xc7a' in part:
+            bitstream_device = 'artix7'
+        if 'xc7z' in part:
+            bitstream_device = 'zynq7'
+        if 'xc7k' in part:
+            bitstream_device = 'kintex7'
+
+        placement_constraints = None
+        pins_constraints = None
+
+        for f in src_files:
+            if f.file_type in ['PCF']:
+                pins_constraints = f.name
+            if f.file_type in ['xdc']:
+                placement_constraints = f.name
+
+        makefile_params = {
+                'top' : self.name,
+                'partname' : partname,
+                'bitstream_device' : bitstream_device,
+            }
+
+        self.render_template('symbiflow-nextpnr-makefile.j2',
+                             'Makefile',
+                             makefile_params)
 
     def configure_vpr(self):
         (src_files, incdirs) = self._get_fileset_files(force_slash=True)
@@ -138,6 +196,8 @@ class Symbiflow(Edatool):
     def configure_main(self):
         if self.tool_options.get("pnr") == "vtr":
             self.configure_vpr()
+        elif self.tool_options.get("pnr") == "nextpnr":
+            self.configure_nextpnr()
         else:
             logger.error("VPR is the only P&R tool currently supported in SymbiFlow")
 
