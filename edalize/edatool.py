@@ -115,12 +115,15 @@ class Edatool(object):
 
     def configure(self, args):
         logger.info("Setting up project")
-        self.configure_pre()
+        # Store args
+        self.args = args
+        self.configure_pre(args)
         self.configure_main()
         self.configure_post()
 
-    def configure_pre(self):
-        pass
+    def configure_pre(self, args):
+        parsed_args = self.parse_args(args, self.argtypes)
+        self._apply_parameters(parsed_args)
 
     def configure_main(self):
         pass
@@ -147,6 +150,8 @@ class Edatool(object):
 
     def run(self, args={}):
         logger.info("Running")
+        # Store args
+        self.args = args
         self.run_pre(args)
         self.run_main()
         self.run_post()
@@ -221,8 +226,11 @@ class Edatool(object):
             backend_args.add_argument('--'+_opt['name'],
                                       help=_opt['desc'])
 
+        known, unknown = parser.parse_known_args(args)
+        self.check_args(unknown)
+
         args_dict = {}
-        for key, value in vars(parser.parse_args(args)).items():
+        for key, value in sorted(vars(known).items()):
             if value is None:
                 continue
             if type(value) == list:
@@ -237,9 +245,7 @@ class Edatool(object):
         #Parse arguments
         backend_members = [x['name'] for x in _opts.get('members', [])]
         backend_lists   = [x['name'] for x in _opts.get('lists', [])]
-        known, unknown = parser.parse_known_args(args)
-        self.check_args(unknown)
-        for key,value in sorted(vars(known).items()):
+        for key,value in args.items():
             if value is None:
                 continue
             if key in backend_members:
