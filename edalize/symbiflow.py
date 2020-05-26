@@ -53,12 +53,17 @@ class Symbiflow(Edatool):
                     {
                         "name": "pnr",
                         "type": "String",
-                        "desc": 'Place and Route tool. Currently only "vpr" and "nextpnr" are supported',
+                        "desc": 'Place and Route tool. Currently only "vpr" is supported',
                     },
                     {
                         "name": "options",
                         "type": "String",
                         "desc": "Tool options. If not used, default options for the tool will be used",
+                    },
+                    {
+                        "name" : "seed",
+                        "type" : "String",
+                        "desc" : "Seed assigned to the PnR tool."
                     },
                 ]
             }
@@ -128,6 +133,8 @@ class Symbiflow(Edatool):
 
         options = self.tool_options.get("options", None)
 
+        seed = self.tool_options.get('seed', None)
+
         makefile_params = {
             "top": self.toplevel,
             "sources": " ".join(file_list),
@@ -139,6 +146,7 @@ class Symbiflow(Edatool):
             "xdc": " ".join(placement_constraints),
             "builddir": builddir,
             "options": options,
+            'seed': seed,
         }
         self.render_template("symbiflow-vpr-makefile.j2", "Makefile", makefile_params)
 

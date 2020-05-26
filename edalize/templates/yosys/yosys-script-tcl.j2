@@ -41,6 +41,11 @@ foreach f ${file_table} {
 verilog_defaults -pop
 
 {{ synth_command }} {{ synth_options }} -top {{ top }}
+
+{% for command in additional_commands %}
+{{ command }}
+{% endfor %}
+
 write_blif {{ name }}.blif
 write_json {{ name }}.json
 write_edif {{ edif_opts }} {{ name }}.edif
