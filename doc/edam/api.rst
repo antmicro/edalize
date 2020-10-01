@@ -31,6 +31,8 @@ Different EDA tools handle different subsets of files and are expected to ignore
 - vhdlSource-2008 : VHDL 2008 source
 - xci : Xilinx Vivado IP file
 - xdc : Xilinx Vivado constraint file
+- bba : Nextpnr chip data file
+- synthJson : Yosys-generated synthesis output file
 
 
 =============== ===================== ===========
