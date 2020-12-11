@@ -44,6 +44,7 @@ setup(
         'templates/libero/libero-run.tcl.j2',
         'templates/libero/libero-syn-user.tcl.j2',
         'templates/ghdl/Makefile.j2',
+        'templates/surelog/surelog-makefile.j2',
     ]},
     author = "Olof Kindgren",
     author_email = "olof.kindgren@gmail.com",
