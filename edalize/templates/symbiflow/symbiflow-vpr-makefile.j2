@@ -2,7 +2,13 @@
 SHELL = bash
 
 TOP	:= {{ top }}
-VERILOG := {{ sources }}
+{% if sources -%}
+VERILOG := -v {{ sources }}
+{%- endif %}
+{% if uhdm -%}
+UHDM := -u {{ uhdm }}
+{%- endif %}
+
 PARTNAME:= {{ partname }}
 DEVICE  := {{ part }}_{{ device_suffix }}
 BITSTREAM_DEVICE := {{ bitstream_device }}
@@ -38,8 +44,17 @@ SDC_OPTS = -s ${SDC}
 
 all: ${TOP}.bit
 
+{% if uhdm -%}
+{{ top }}.uhdm:
+	$(MAKE) -f surelog.mk
+{%- endif %}
+
+{% if uhdm -%}
+${TOP}.eblif: {{ top }}.uhdm
+{% else %}
 ${TOP}.eblif:
-	${SOURCE_OPTS} ${TOOLCHAIN_PREFIX}synth -t ${TOP} -v ${VERILOG} -d ${BITSTREAM_DEVICE} ${PARTNAME_OPT} ${XDC_OPTS}
+{%- endif %}
+	${SOURCE_OPTS} ${TOOLCHAIN_PREFIX}synth -t ${TOP} ${UHDM} ${VERILOG} -d ${BITSTREAM_DEVICE} ${PARTNAME_OPT} ${XDC_OPTS}
 
 ${TOP}.net: ${TOP}.eblif
 	${SOURCE_OPTS} ${TOOLCHAIN_PREFIX}pack -e ${TOP}.eblif -d ${DEVICE} ${SDC_OPTS} ${VPR_OPTIONS_OPTS}
