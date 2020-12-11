@@ -4,13 +4,21 @@ TARGET   := {{ name }}
 
 all: $(TARGET).{{ default_target }}
 
+{% if use_surelog -%}
+{{ top }}.uhdm:
+	$(MAKE) -f surelog.mk
 
-%.blif: {{ script_name }}
-	yosys -l yosys.log -p "tcl $?"
-%.json: {{ script_name }}
-	yosys -l yosys.log -p "tcl $?"
-%.edif: {{ script_name }}
-	yosys -l yosys.log -p "tcl $?"
+DEPENDENCIES := {{ top }}.uhdm {{ script_name }}
+{% else %}
+DEPENDENCIES := {{ script_name }}
+{%- endif %}
+
+%.blif: ${DEPENDENCIES}
+	yosys -l yosys.log -p "tcl {{ script_name }}"
+%.json: ${DEPENDENCIES}
+	yosys -l yosys.log -p "tcl {{ script_name }}"
+%.edif: ${DEPENDENCIES}
+	yosys -l yosys.log -p "tcl {{ script_name }}"
 
 clean:
 	rm -f $(TARGET).blif $(TARGET).json $(TARGET).edif

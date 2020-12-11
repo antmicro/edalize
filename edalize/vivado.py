@@ -48,6 +48,14 @@ class Vivado(Edatool):
                         {'name' : 'hw_target',
                         'type' : 'Description',
                         'desc' : 'Board identifier (e.g. */xilinx_tcf/Digilent/123456789123A'},
+                    ],
+                    'lists' : [
+                        {'name' : 'yosys_synth_options',
+                         'type' : 'String',
+                         'desc' : 'Additional options for the synth command'},
+                        {'name' : 'library_files',
+                         'type' : 'String',
+                         'desc' : 'List of the library files for Surelog'},
                     ]}
 
     """ Get tool version
@@ -89,7 +97,7 @@ class Vivado(Edatool):
             if has_vhdl or has_vhdl2008:
                 logger.error("VHDL files are not supported in Yosys.")
 
-            yosys_synth_options = self.tool_options.get('yosys_synth_options', '')
+            yosys_synth_options = self.tool_options.get('yosys_synth_options', [])
             yosys_edam = {
                     'files'         : self.files,
                     'name'          : self.name,
@@ -101,6 +109,7 @@ class Vivado(Edatool):
                                             'yosys_synth_options' : yosys_synth_options,
                                             'yosys_as_subtool' : True,
                                             'script_name'   : 'yosys.tcl',
+                                            'library_files' : self.tool_options.get('library_files', []),
                                             }
                                     }
                     }
