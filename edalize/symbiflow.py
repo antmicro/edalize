@@ -205,8 +205,9 @@ class Symbiflow(Edatool):
         placement_constraints = []
         user_files = []
 
+
         for f in src_files:
-            if f.file_type in ["verilogSource"]:
+            if f.file_type in ["verilogSource", "systemVerilogSource"]:
                 file_list.append(f.name)
             if f.file_type in ["SDC"]:
                 timing_constraints.append(f.name)
