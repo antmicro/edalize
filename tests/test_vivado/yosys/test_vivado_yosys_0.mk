@@ -4,13 +4,13 @@ TARGET   := test_vivado_yosys_0
 
 all: $(TARGET).edif
 
-
-%.blif: yosys.tcl
-	yosys -l yosys.log -p "tcl $?"
-%.json: yosys.tcl
-	yosys -l yosys.log -p "tcl $?"
-%.edif: yosys.tcl
-	yosys -l yosys.log -p "tcl $?"
+DEPENDENCIES := yosys.tcl
+%.blif: ${DEPENDENCIES}
+	yosys -l yosys.log -p "tcl yosys.tcl"
+%.json: ${DEPENDENCIES}
+	yosys -l yosys.log -p "tcl yosys.tcl"
+%.edif: ${DEPENDENCIES}
+	yosys -l yosys.log -p "tcl yosys.tcl"
 
 clean:
 	rm -f $(TARGET).blif $(TARGET).json $(TARGET).edif
