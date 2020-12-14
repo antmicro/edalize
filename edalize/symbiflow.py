@@ -102,6 +102,16 @@ class Symbiflow(Edatool):
 
         yosys_frontend = self.tool_options.get('yosys_frontend', "verilog")
 
+        for f in src_files:
+                if f.file_type in ["SDC"]:
+                    timing_constraints.append(f.name)
+                if f.file_type in ["PCF"]:
+                    pins_constraints.append(f.name)
+                if f.file_type in ["xdc"]:
+                    placement_constraints.append(f.name)
+                if f.file_type in ["user"]:
+                    user_files.append(f.name)
+
         if yosys_frontend in ["uhdm"]:
             surelog_edam = {
                     'files'         : self.files,
@@ -122,14 +132,6 @@ class Symbiflow(Edatool):
             for f in src_files:
                 if f.file_type in ["verilogSource", "systemVerilogSource"]:
                     file_list.append(f.name)
-                if f.file_type in ["SDC"]:
-                    timing_constraints.append(f.name)
-                if f.file_type in ["PCF"]:
-                    pins_constraints.append(f.name)
-                if f.file_type in ["xdc"]:
-                    placement_constraints.append(f.name)
-                if f.file_type in ["user"]:
-                    user_files.append(f.name)
 
         part = self.tool_options.get('part', None)
         package = self.tool_options.get('package', None)

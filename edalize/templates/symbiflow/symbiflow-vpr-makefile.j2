@@ -6,7 +6,7 @@ TOP	:= {{ top }}
 VERILOG := -v {{ sources }}
 {%- endif %}
 {% if uhdm -%}
-UHDM := -u {{ uhdm }}
+UHDM    := -u {{ uhdm }}
 {%- endif %}
 
 PARTNAME:= {{ partname }}
@@ -47,6 +47,7 @@ all: ${TOP}.bit
 {% if uhdm -%}
 {{ top }}.uhdm:
 	$(MAKE) -f surelog.mk
+
 {%- endif %}
 
 {% if uhdm -%}
