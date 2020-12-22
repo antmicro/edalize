@@ -33,6 +33,9 @@ class Yosys(Edatool):
                          'desc' : 'Generated tcl script filename, defaults to $name.mk'},
                         ],
                     'lists' : [
+                        {'name' : 'yosys_read_options',
+                         'type' : 'String',
+                         'desc' : 'Addtional options for the read_* command (e.g. read_verlog or read_uhdm)'},
                         {'name' : 'yosys_synth_options',
                          'type' : 'String',
                          'desc' : 'Additional options for the synth command'},
@@ -46,6 +49,7 @@ class Yosys(Edatool):
         (src_files, incdirs) = self._get_fileset_files()
         part_of_toolchain = self.tool_options.get('yosys_as_subtool', False)
 
+        yosys_read_options = " ".join(self.tool_options.get('yosys_read_options', []))
         file_table = []
         yosys_synth_options = self.tool_options.get('yosys_synth_options', [])
         use_surelog = False
@@ -67,7 +71,7 @@ class Yosys(Edatool):
             surelog = getattr(import_module("edalize.surelog"), 'Surelog')(surelog_edam, self.work_root)
             surelog.configure()
             self.vlogparam.clear() # vlogparams are handled by Surelog
-            file_table.append('read_uhdm {' + os.path.abspath(self.work_root + '/' + self.toplevel + '.uhdm') + '}')
+            file_table.append('read_uhdm ' + yosys_read_options + ' {' + os.path.abspath(self.work_root + '/' + self.toplevel + '.uhdm') + '}')
         else:
             for f in src_files:
                 cmd = ""
@@ -80,7 +84,7 @@ class Yosys(Edatool):
                 else:
                     continue
 
-                file_table.append(cmd + ' {' + f.name + '}')
+                file_table.append(cmd + ' ' + yosys_read_options + ' {' + f.name + '}')
 
         verilog_defines = []
         for key, value in self.vlogdefine.items():
