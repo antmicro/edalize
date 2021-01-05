@@ -23,9 +23,9 @@ class Surelog(Edatool):
         (src_files, incdirs) = self._get_fileset_files()
         file_list = []
         for f in src_files:
-            if f.file_type in ['verilogSource']:
+            if f.file_type.startswith('verilogSource'):
                 file_list.append(f.name)
-            if f.file_type in ['systemVerilogSource']:
+            if f.file_type.startswith('systemVerilogSource'):
                 file_list.append(f.name)
 
         library_files = self.tool_options.get('library_files', [])
@@ -36,11 +36,13 @@ class Surelog(Edatool):
 
         verilog_params_command = ""
         for key, value in self.vlogparam.items():
-            verilog_params_command = verilog_params_command + " -P" + key + '=' + value
+            verilog_params_command += ' -P{key}={value}'.format(key=key, value=value)
 
-        include_files = self.tool_options.get('include_files', [])
+        verilog_defines_command = "+define" if self.vlogdefine.items() else ""
+        for key, value in self.vlogdefine.items():
+            verilog_defines_command += '+{key}={value}'.format(key=key, value=value)
+
         include_files_command = ""
-
         for include_file in incdirs:
             include_files_command = include_files_command + " -I" + include_file
 
@@ -50,6 +52,7 @@ class Surelog(Edatool):
                 'sources'                   : ' '.join(file_list),
                 'library_command'           : library_command,
                 'verilog_params_command'    : verilog_params_command,
+                'verilog_defines_command'   : verilog_defines_command,
                 'include_files_command'     : include_files_command,
         }
 

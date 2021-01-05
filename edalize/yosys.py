@@ -71,6 +71,7 @@ class Yosys(Edatool):
             surelog = getattr(import_module("edalize.surelog"), 'Surelog')(surelog_edam, self.work_root)
             surelog.configure()
             self.vlogparam.clear() # vlogparams are handled by Surelog
+            self.vlogdefine.clear() # vlogdefines are handled by Surelog
             file_table.append('read_uhdm ' + yosys_read_options + ' {' + os.path.abspath(self.work_root + '/' + self.toplevel + '.uhdm') + '}')
         else:
             for f in src_files:
