@@ -51,10 +51,10 @@ all: ${TOP}.bit
 {%- endif %}
 
 {% if uhdm -%}
-${TOP}.eblif: {{ top }}.uhdm
-{% else %}
-${TOP}.eblif:
+DEPENDENCIES := {{ top }}.uhdm
 {%- endif %}
+
+${TOP}.eblif: ${DEPENDENCIES}
 	${SOURCE_OPTS} ${TOOLCHAIN_PREFIX}synth -t ${TOP} ${UHDM} ${VERILOG} -d ${BITSTREAM_DEVICE} ${PARTNAME_OPT} ${XDC_OPTS}
 
 ${TOP}.net: ${TOP}.eblif
