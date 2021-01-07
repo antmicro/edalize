@@ -47,11 +47,11 @@ all: ${TOP}.bit
 {%- endif %}
 
 {% if uhdm -%}
-${TOP}.eblif: {{ top }}.uhdm
-{% else %}
-${TOP}.eblif:
-	$(EDALIZE_LAUNCHER) ${TOOLCHAIN_PREFIX}synth -t ${TOP} -v ${VERILOG} -d ${BITSTREAM_DEVICE} ${PARTNAME_OPT} ${XDC_OPTS}
+DEPENDENCIES := {{ top }}.uhdm
 {%- endif %}
+
+${TOP}.eblif: ${DEPENDENCIES}
+	$(EDALIZE_LAUNCHER) ${TOOLCHAIN_PREFIX}synth -t ${TOP} -v ${VERILOG} -d ${BITSTREAM_DEVICE} ${PARTNAME_OPT} ${XDC_OPTS}
 
 ${TOP}.net: ${TOP}.eblif
 	$(EDALIZE_LAUNCHER) ${TOOLCHAIN_PREFIX}pack -e ${TOP}.eblif -d ${DEVICE} ${SDC_OPTS} ${VPR_OPTIONS_OPTS}
