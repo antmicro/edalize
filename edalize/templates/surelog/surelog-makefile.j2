@@ -23,5 +23,5 @@ INCLUDE_COMMAND = {{ include_files_command }}
 all: ${TOP}.uhdm
 
 ${TOP}.uhdm:
-	surelog -parse -sverilog ${LIBRARY_COMMAND} ${DEFINES_COMMAND} ${PARAMS_COMMAND} -top ${TOP} ${INCLUDE_COMMAND} ${VERILOG}
+	surelog -yosys -parse -sverilog ${LIBRARY_COMMAND} ${DEFINES_COMMAND} ${PARAMS_COMMAND} -top ${TOP} ${INCLUDE_COMMAND} ${VERILOG}
 	cp slpp_all/surelog.uhdm ${TOP}.uhdm
