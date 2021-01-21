@@ -64,6 +64,7 @@ class Yosys(Edatool):
                     'parameters'    : self.parameters,
                     'tool_options'  : {'surelog' : {
                                             'library_files' : self.tool_options.get('library_files', []),
+                                            'surelog_options' : self.tool_options.get('surelog_options', []),
                                             }
                                     }
                     }
