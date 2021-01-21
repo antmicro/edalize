@@ -46,6 +46,9 @@ class Yosys(Edatool):
                         {'name' : 'library_files',
                          'type' : 'String',
                          'desc' : 'List of the library files for Surelog'},
+                        {'name' : 'surelog_options',
+                         'type' : 'String',
+                         'desc' : 'Additional options for the Surelog'},
                         ]}
 
     def configure_main(self):
