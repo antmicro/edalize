@@ -14,11 +14,11 @@ DEPENDENCIES := {{ script_name }}
 {%- endif %}
 
 %.blif: ${DEPENDENCIES}
-	yosys -l yosys.log -p "tcl {{ script_name }}"
+	uhdm-yosys -l yosys.log -p "tcl {{ script_name }}"
 %.json: ${DEPENDENCIES}
-	yosys -l yosys.log -p "tcl {{ script_name }}"
+	uhdm-yosys -l yosys.log -p "tcl {{ script_name }}"
 %.edif: ${DEPENDENCIES}
-	yosys -l yosys.log -p "tcl {{ script_name }}"
+	uhdm-yosys -l yosys.log -p "tcl {{ script_name }}"
 
 clean:
 	rm -f $(TARGET).blif $(TARGET).json $(TARGET).edif
