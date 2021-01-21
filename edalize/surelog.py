@@ -17,43 +17,48 @@ class Surelog(Edatool):
                         {'name' : 'library_files',
                          'type' : 'String',
                          'desc' : 'List of the library files for Surelog'},
+                        {'name' : 'surelog_options',
+                         'type' : 'String',
+                         'desc' : 'List of the Surelog parameters'},
                         ]}
 
     def configure_main(self):
         (src_files, incdirs) = self._get_fileset_files()
-        file_list = []
+        verilog_file_list = []
+        systemverilog_file_list = []
         for f in src_files:
             if f.file_type.startswith('verilogSource'):
-                file_list.append(f.name)
+                verilog_file_list.append(f.name)
             if f.file_type.startswith('systemVerilogSource'):
-                file_list.append(f.name)
+                systemverilog_file_list.append("-sv " + f.name)
 
         library_files = self.tool_options.get('library_files', [])
-        library_command = ""
+        surelog_options = self.tool_options.get('surelog_options', [])
 
-        for library_file in library_files:
-            library_command = library_command + " -v " + library_file
+        pattern = len(library_files) * "-v %s"
+        library_command = pattern % tuple(library_files)
 
-        verilog_params_command = ""
-        for key, value in self.vlogparam.items():
-            verilog_params_command += ' -P{key}={value}'.format(key=key, value=value)
+        pattern = len(self.vlogparam.keys()) * " -P%s=%%s"
+        verilog_params_command = pattern % tuple(self.vlogparam.keys()) % tuple(self.vlogparam.values())
 
         verilog_defines_command = "+define" if self.vlogdefine.items() else ""
-        for key, value in self.vlogdefine.items():
-            verilog_defines_command += '+{key}={value}'.format(key=key, value=value)
+        pattern = len(self.vlogdefine.keys()) * "+%s=%%s"
+        verilog_defines_command += pattern % tuple(self.vlogdefine.keys()) % tuple(self.vlogdefine.values())
 
-        include_files_command = ""
-        for include_file in incdirs:
-            include_files_command = include_files_command + " -I" + include_file
+        pattern = len(incdirs) * " -I%s"
+        include_files_command = pattern % tuple(incdirs)
+
 
         template_vars = {
                 'top'                       : self.toplevel,
                 'name'                      : self.name,
-                'sources'                   : ' '.join(file_list),
+                'sources'                   : ' '.join(verilog_file_list),
+                'sv_sources'                : ' '.join(systemverilog_file_list),
                 'library_command'           : library_command,
                 'verilog_params_command'    : verilog_params_command,
                 'verilog_defines_command'   : verilog_defines_command,
                 'include_files_command'     : include_files_command,
+                'surelog_options'           : ' '.join(surelog_options),
         }
 
 
