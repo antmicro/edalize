@@ -59,6 +59,9 @@ class Vivado(Edatool):
                         {'name' : 'library_files',
                          'type' : 'String',
                          'desc' : 'List of the library files for Surelog'},
+                        {'name' : 'surelog_options',
+                         'type' : 'String',
+                         'desc' : 'Additional options for the Surelog'},
                     ]}
 
     """ Get tool version
@@ -115,6 +118,7 @@ class Vivado(Edatool):
                                             'yosys_as_subtool' : True,
                                             'script_name'   : 'yosys.tcl',
                                             'library_files' : self.tool_options.get('library_files', []),
+                                            'surelog_options' : self.tool_options.get('surelog_options', []),
                                             }
                                     }
                     }
