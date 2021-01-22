@@ -69,7 +69,10 @@ class Symbiflow(Edatool):
                 'lists' : [
                         {'name' : 'library_files',
                          'type' : 'String',
-                         'desc' : 'List of the library files for Surelog'},
+                         'desc' : 'list of the library files for surelog'},
+                        {'name' : 'surelog_options',
+                         'type' : 'String',
+                         'desc' : 'List of options for surelog'},
                 ],
             }
 
@@ -120,6 +123,7 @@ class Symbiflow(Edatool):
                     'parameters'    : self.parameters,
                     'tool_options'  : {'surelog' : {
                                             'library_files' : self.tool_options.get('library_files', []),
+                                            'surelog_options' : self.tool_options.get('surelog_options', []),
                                             }
                                     }
                     }
