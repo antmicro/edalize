@@ -13,10 +13,12 @@ class Surelog(Edatool):
     def get_doc(cls, api_ver):
         if api_ver == 0:
             return {'description' : "Surelog",
-                    'lists' : [
+                    "members" : [
                         {'name' : 'library_files',
                          'type' : 'String',
                          'desc' : 'List of the library files for Surelog'},
+                        ],
+                    'lists' : [
                         {'name' : 'surelog_options',
                          'type' : 'String',
                          'desc' : 'List of the Surelog parameters'},
@@ -32,10 +34,14 @@ class Surelog(Edatool):
             if f.file_type.startswith('systemVerilogSource'):
                 systemverilog_file_list.append("-sv " + f.name)
 
-        library_files = self.tool_options.get('library_files', [])
+        library_files = self.tool_options.get('library_files', None)
         surelog_options = self.tool_options.get('surelog_options', [])
 
-        pattern = len(library_files) * "-v %s"
+        if library_files:
+            print(library_files)
+            library_files = library_files.split(",")
+
+        pattern = len(library_files) * " -v %s"
         library_command = pattern % tuple(library_files)
 
         pattern = len(self.vlogparam.keys()) * " -P%s=%%s"

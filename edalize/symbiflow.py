@@ -76,11 +76,13 @@ class Symbiflow(Edatool):
                         "type" : "String",
                         "desc" : 'Select yosys frontend. Currently "uhdm" and "verilog" frontends are supported.'
                     },
+                    {
+                        "name" : "library_files",
+                        "type" : "String",
+                        "desc" : "list of the library files for surelog"
+                    },
                 ],
                 'lists' : [
-                        {'name' : 'library_files',
-                         'type' : 'String',
-                         'desc' : 'list of the library files for surelog'},
                         {'name' : 'surelog_options',
                          'type' : 'String',
                          'desc' : 'List of options for surelog'},
