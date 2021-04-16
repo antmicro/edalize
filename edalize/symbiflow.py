@@ -23,6 +23,8 @@ A core (usually the system core) can add the following files:
 class Symbiflow(Edatool):
 
     argtypes = ['vlogdefine', 'vlogparam', 'generic']
+    archs = ['xilinx', 'fpga_interchange']
+    families = ['xc7']
 
     @classmethod
     def get_doc(cls, api_ver):
@@ -78,16 +80,41 @@ class Symbiflow(Edatool):
         yosys_synth_options = self.tool_options.get('yosys_synth_options', '')
         yosys_additional_commands = self.tool_options.get('yosys_additional_commands', '')
         nextpnr_impl_options = self.tool_options.get('options', '')
+        arch = self.tool_options.get('arch')
+
+        assert arch in getattr(self, 'archs'), 'Missing or invalid "arch" parameter: {} in "tool_options"'.format(arch)
+
+        package = self.tool_options.get('package', None)
+        assert package is not None, 'Missing required "package" parameter'
+
+        schema_dir = self.tool_options.get('schema_dir', None)
+        assert schema_dir is not None or arch is not 'fpga_interchange', 'Missing required "schema_dir" parameter for "fpga_interchange" arch'
+
+        part = self.tool_options.get('part', None)
+
+        assert part is not None, 'Missing required "part" parameter'
+
+        target_family = None
+        for family in getattr(self, 'families'):
+            if family in part:
+                target_family = family
+                break
+
+        assert target_family is not None or arch is not "fpga_interchange", "Couldn't find family for part: {}. Available families: {}".format(part, ", ".join(getattr(self, 'families')))
+
         nextpnr_edam = {
                 'files'         : self.files,
                 'name'          : self.name,
                 'toplevel'      : self.toplevel,
                 'tool_options'  : {'nextpnr' : {
-                                        'arch' : 'xilinx',
+                                        'arch' : arch,
                                         'yosys_synth_options' : yosys_synth_options,
                                         'yosys_additional_commands' : yosys_additional_commands,
                                         'nextpnr_impl_options' : nextpnr_impl_options,
                                         'nextpnr_as_subtool' : True,
+                                        'package' : package,
+                                        'family' : target_family,
+                                        'schema_dir' : schema_dir,
                                         }
 
                                 }
@@ -97,12 +124,6 @@ class Symbiflow(Edatool):
         nextpnr.configure(self.args)
 
         builddir = self.tool_options.get('builddir', 'build')
-
-        part = self.tool_options.get('part', None)
-        package = self.tool_options.get('package', None)
-
-        assert part is not None, 'Missing required "part" parameter'
-        assert package is not None, 'Missing required "package" parameter'
 
         partname = part + package
 
@@ -174,7 +195,7 @@ class Symbiflow(Edatool):
                 'environment_script': environment_script,
             }
 
-        self.render_template('symbiflow-nextpnr-makefile.j2',
+        self.render_template('symbiflow-nextpnr-{}-makefile.j2'.format(arch),
                              'Makefile',
                              makefile_params)
 

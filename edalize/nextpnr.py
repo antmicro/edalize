@@ -7,6 +7,8 @@ from importlib import import_module
 class Nextpnr(Edatool):
 
     argtypes = []
+    archs = ['xilinx', 'fpga_interchange']
+    families = ['xc7']
 
     @classmethod
     def get_doc(cls, api_ver):
@@ -95,10 +97,13 @@ class Nextpnr(Edatool):
         file_table = []
 
         output_format = self.tool_options.get('output_format', 'fasm')
-        arch = self.tool_options.get('arch', 'xilinx')
+        arch = self.tool_options.get('arch')
+
+        assert arch in getattr(self, 'archs'), 'Missing or invalid "arch" parameter in "tool_options"'
 
         synth_design = None
         chipdb = None
+        device = None
         xdc = None
 
         for f in src_files:
@@ -106,26 +111,47 @@ class Nextpnr(Edatool):
                 synth_design = f.name
             elif f.file_type in ['bba']:
                 chipdb = f.name
+            elif f.file_type in ['device']:
+                device = f.name
             elif f.file_type in ['xdc']:
                 xdc = f.name
             else:
                 continue
 
         assert chipdb and xdc, "Missing required files."
+        assert device is not None or arch is not 'fpga_interchange', 'Missing required ".device" file for "fpga_interchange" arch'
 
         additional_options = self.tool_options.get('nextpnr_impl_options', '')
+        package = self.tool_options.get('package', None)
+
+        assert package is not None or arch is not 'fpga_interchange', 'Missing required "package" parameter for "fpga_interchange" arch'
+
+        package = package.split('-')[0] if arch == "fpga_interchange" else None
+
+        family = self.tool_options.get('family', None)
+
+        assert family is not None or arch is not 'fpga_interchange', 'Missing required "family" parameter for "fpga_interchange" arch'
+        assert family in getattr(self, 'families') or arch is not 'fpga_interchange', 'Unsupported family: {}'.format(family)
+
+        schema_dir = self.tool_options.get('schema_dir', None)
+        assert schema_dir is not None or arch is not 'fpga_interchange', 'Missing required "schema_dir" parameter for "fpga_interchange" arch'
 
         template_vars = {
+                'toplevel'          : self.toplevel,
                 'arch'              : arch,
                 'chipdb'            : chipdb,
+                'device'            : device,
                 'constr'            : xdc,
                 'default_target'    : output_format,
                 'name'              : self.name,
+                'package'           : package,
+                'family'            : family,
+                'schema_dir'        : schema_dir,
                 'additional_options': additional_options,
         }
 
         makefile_name = self.name + '-nextpnr.mk' if part_of_toolchain else 'Makefile'
-        self.render_template('nextpnr-makefile.j2',
+        self.render_template('nextpnr-{}-makefile.j2'.format(arch),
                              makefile_name,
                              template_vars)
 
