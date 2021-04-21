@@ -165,7 +165,16 @@ class Edatool(object):
         else:
             logger.warning("Invalid API version '{}' for get_tool_options".format(api_ver))
 
-    def configure(self, args=[]):
+    def check_args(self, unknown):
+        # If a tool is using subtools some of the argument may be
+        # parsed by the subtool. This function is used to check if
+        # all the provided arguments were correct. A tool can override
+        # this function to provide custom args checking logic.
+
+        if unknown:
+            raise Exception(f'Unknown command line option {unknown[0]}')
+
+    def configure(self, args):
         if args:
             logger.error("Edalize has stopped supporting passing arguments as a function argument. Set these values as default values in the EDAM object instead")
         logger.info("Setting up project")
@@ -291,7 +300,9 @@ class Edatool(object):
         #Parse arguments
         backend_members = [x['name'] for x in _opts.get('members', [])]
         backend_lists   = [x['name'] for x in _opts.get('lists', [])]
-        for key,value in args.items():
+        known, unknown = parser.parse_known_args(args)
+        self.check_args(unknown)
+        for key,value in sorted(vars(known).items()):
             if value is None:
                 continue
             if key in backend_members:
@@ -401,7 +412,7 @@ class Edatool(object):
                 logger.error(e.stderr.decode())
                 logger.debug("=== STDERR ===")
                 logger.debug(e.stderr)
-            
+
             raise RuntimeError(_s)
         return cp.returncode, cp.stdout, cp.stderr
 

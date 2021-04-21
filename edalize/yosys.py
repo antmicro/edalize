@@ -6,6 +6,8 @@ import logging
 import os.path
 
 from edalize.edatool import Edatool
+from edalize.surelog import Surelog
+from importlib import import_module
 
 logger = logging.getLogger(__name__)
 
@@ -33,31 +35,93 @@ class Yosys(Edatool):
                         {'name' : 'script_name',
                          'type' : 'String',
                          'desc' : 'Generated tcl script filename, defaults to $name.mk'},
+                        {'name' : 'library_files',
+                         'type' : 'String',
+                         'desc' : 'List of the library files for Surelog'},
                         ],
                     'lists' : [
+                        {'name' : 'yosys_read_options',
+                         'type' : 'String',
+                         'desc' : 'Addtional options for the read_* command (e.g. read_verlog or read_uhdm)'},
                         {'name' : 'yosys_synth_options',
                          'type' : 'String',
                          'desc' : 'Additional options for the synth command'},
+                        {'name' : 'yosys_additional_commands',
+                         'type' : 'String',
+                         'desc' : 'Additional commands for the yosys script'},
+                        {'name' : 'surelog_options',
+                         'type' : 'String',
+                         'desc' : 'Additional options for the Surelog'},
                         ]}
+
+    @classmethod
+    def validate_args(cls, args):
+        yosys_help = cls.get_doc(0)
+        yosys_members = yosys_help['members']
+        yosys_lists = yosys_help['lists']
+
+        yosys_args = []
+        yosys_args.append(a['name'] for a in yosys_members)
+        yosys_args.append(a['name'] for a in yosys_lists)
+
+        for arg in args:
+            if not arg.startswith('-'):
+                continue
+            argname = arg.strip('-')
+            if argname not in yosys_args:
+                raise Exception(f'Unknown command line option {arg}')
+
+    def check_args(self, unknown):
+        part_of_toolchain = self.tool_options.get('yosys_as_subtool', False)
+        if part_of_toolchain is False:
+            super().check_args(unknown)
+        else:
+            # we assume the calling tool will handle parameter check
+            pass
 
     def configure_main(self):
         # write Yosys tcl script file
         (src_files, incdirs) = self._get_fileset_files()
         part_of_toolchain = self.tool_options.get('yosys_as_subtool', False)
 
+        yosys_read_options = " ".join(self.tool_options.get('yosys_read_options', []))
         file_table = []
-        for f in src_files:
-            cmd = ""
-            if f.file_type.startswith('verilogSource'):
-                cmd = 'read_verilog'
-            elif f.file_type.startswith('systemVerilogSource'):
-                cmd = 'read_verilog -sv'
-            elif f.file_type == 'tclSource':
-                cmd = 'source'
-            else:
-                continue
+        yosys_synth_options = self.tool_options.get('yosys_synth_options', [])
+        use_surelog = False
+        if "frontend=surelog" in yosys_synth_options:
+            use_surelog = True
+            yosys_synth_options.remove("frontend=surelog")
+        if use_surelog:
+            surelog_edam = {
+                    'files'         : self.files,
+                    'name'          : self.name,
+                    'toplevel'      : self.toplevel,
+                    'parameters'    : self.parameters,
+                    'tool_options'  : {'surelog' : {
+                                            'library_files' : self.tool_options.get('library_files', None),
+                                            'surelog_options' : self.tool_options.get('surelog_options', []),
+                                            }
+                                    }
+                    }
 
-            file_table.append(cmd + ' {' + f.name + '}')
+            surelog = getattr(import_module("edalize.surelog"), 'Surelog')(surelog_edam, self.work_root)
+            surelog.configure(self.args)
+            self.vlogparam.clear() # vlogparams are handled by Surelog
+            self.vlogdefine.clear() # vlogdefines are handled by Surelog
+            file_table.append('read_uhdm ' + yosys_read_options + ' {' + os.path.abspath(self.work_root + '/' + self.toplevel + '.uhdm') + '}')
+        else:
+            for f in src_files:
+                cmd = ""
+                if f.file_type.startswith('verilogSource'):
+                    cmd = 'read_verilog'
+                elif f.file_type.startswith('systemVerilogSource'):
+                    cmd = 'read_verilog -sv'
+                elif f.file_type == 'tclSource':
+                    cmd = 'source'
+                else:
+                    continue
+
+                file_table.append(cmd + ' {' + f.name + '}')
 
         verilog_defines = []
         for key, value in self.vlogdefine.items():
@@ -88,11 +152,13 @@ class Yosys(Edatool):
                 'top'                 : self.toplevel,
                 'synth_command'       : "synth_" + arch,
                 'synth_options'       : " ".join(self.tool_options.get('yosys_synth_options', '')),
+                'additional_commands' : self.tool_options.get('yosys_additional_commands', []),
                 'write_command'       : "write_" + output_format,
                 'default_target'      : output_format,
                 'edif_opts'           : '-pvector bra' if arch=='xilinx' else '',
                 'script_name'         : script_name,
                 'name'                : self.name
+                'use_surelog'         : use_surelog,
         }
 
         self.render_template('yosys-script-tcl.j2',

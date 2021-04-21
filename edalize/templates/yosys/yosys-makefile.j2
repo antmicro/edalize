@@ -4,6 +4,16 @@ TARGET   := {{ name }}
 
 all: $(TARGET).{{ default_target }}
 
+{% if use_surelog -%}
+{{ top }}.uhdm:
+	$(MAKE) -f surelog.mk
+
+DEPENDENCIES := {{ top }}.uhdm {{ script_name }}
+YOSYS_BIN = uhdm-yosys
+{% else %}
+DEPENDENCIES := {{ script_name }}
+YOSYS_BIN = yosys
+{%- endif %}
 
 %.blif: {{ script_name }}
 	$(EDALIZE_LAUNCHER) yosys -l yosys.log -p "tcl $?"

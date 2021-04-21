@@ -10,6 +10,7 @@ SDC	:= {{ sdc }}
 PCF	:= {{ pcf }}
 XDC	:= {{ xdc }}
 TOOLCHAIN_PREFIX := {{ toolchain_prefix }}
+BUILDDIR:= {{ builddir }}
 {% if vendor == "xilinx" -%}
 PARTNAME_OPT = -p "{{ partname }}"
 {% else %}
@@ -24,8 +25,13 @@ SOURCE_OPTS = source {{ environment_script }} &&
 VPR_OPTIONS_OPTS = --additional_vpr_options "{{ vpr_options }}"
 {%- endif %}
 
+{% if seed -%}
+VPR_SEED = VPR_SEED="--seed {{ seed }}"
+{%- endif %}
+
 {% if pcf -%}
 PCF_OPTS = -p ${PCF}
+PCF_FASM2BELS_OPTS = --pcf ${PCF}
 {%- endif %}
 
 {% if xdc -%}
@@ -36,26 +42,62 @@ XDC_OPTS = -x ${XDC}
 SDC_OPTS = -s ${SDC}
 {%- endif %}
 
+{% if fasm2bels %}
+RR_GRAPH = {{ rr_graph }}
+VPR_GRID = {{ vpr_grid }}
+VPR_CAPNP_SCHEMA_DIR = {{ vpr_capnp_schema }}
+
+all: timing_summary.rpt
+{% else %}
+all: ${TOP}.bit
+{% endif %}
+
+${BUILDDIR}:
+	mkdir ${BUILDDIR}
+
 all: ${TOP}.bit
 
 ${TOP}.eblif:
-	${SOURCE_OPTS} $(EDALIZE_LAUNCHER) ${TOOLCHAIN_PREFIX}synth -t ${TOP} -v ${VERILOG} -d ${BITSTREAM_DEVICE} ${PARTNAME_OPT} ${XDC_OPTS}
+	${SOURCE_OPTS} cd ${BUILDDIR} && $(EDALIZE_LAUNCHER) ${TOOLCHAIN_PREFIX}synth -t ${TOP} -v ${VERILOG} -d ${BITSTREAM_DEVICE} ${PARTNAME_OPT} ${XDC_OPTS}
 
 ${TOP}.net: ${TOP}.eblif
-	${SOURCE_OPTS} $(EDALIZE_LAUNCHER) ${TOOLCHAIN_PREFIX}pack -e ${TOP}.eblif -d ${DEVICE} ${SDC_OPTS} ${VPR_OPTIONS_OPTS}
+	${SOURCE_OPTS} cd ${BUILDDIR} && $(EDALIZE_LAUNCHER) ${TOOLCHAIN_PREFIX}pack -e ${TOP}.eblif -d ${DEVICE} ${SDC_OPTS} ${VPR_OPTIONS_OPTS}
 
 ${TOP}.place: ${TOP}.net
-	${SOURCE_OPTS} $(EDALIZE_LAUNCHER) ${TOOLCHAIN_PREFIX}place -e ${TOP}.eblif -d ${DEVICE} -n ${TOP}.net -P ${PARTNAME} ${SDC_OPTS} ${PCF_OPTS} ${VPR_OPTIONS_OPTS}
+	${SOURCE_OPTS} cd ${BUILDDIR} && $(EDALIZE_LAUNCHER) ${TOOLCHAIN_PREFIX}place -e ${TOP}.eblif -d ${DEVICE} -n ${TOP}.net -P ${PARTNAME} ${SDC_OPTS} ${PCF_OPTS} ${VPR_OPTIONS_OPTS}
 
 ${TOP}.route: ${TOP}.place
-	${SOURCE_OPTS} $(EDALIZE_LAUNCHER) ${TOOLCHAIN_PREFIX}route -e ${TOP}.eblif -d ${DEVICE} ${SDC_OPTS} ${VPR_OPTIONS_OPTS}
+	${SOURCE_OPTS} cd ${BUILDDIR} && $(EDALIZE_LAUNCHER) ${TOOLCHAIN_PREFIX}route -e ${TOP}.eblif -d ${DEVICE} ${SDC_OPTS} ${VPR_OPTIONS_OPTS}
 
 ${TOP}.fasm: ${TOP}.route
-	${SOURCE_OPTS} $(EDALIZE_LAUNCHER) ${TOOLCHAIN_PREFIX}write_fasm -e ${TOP}.eblif -d ${DEVICE} ${SDC_OPTS} ${VPR_OPTIONS_OPTS}
+	${SOURCE_OPTS} cd ${BUILDDIR} && $(EDALIZE_LAUNCHER) ${TOOLCHAIN_PREFIX}write_fasm -e ${TOP}.eblif -d ${DEVICE} ${SDC_OPTS} ${VPR_OPTIONS_OPTS}
 
 ${TOP}.bit: ${TOP}.fasm
-	${SOURCE_OPTS} $(EDALIZE_LAUNCHER) ${TOOLCHAIN_PREFIX}write_bitstream -d ${BITSTREAM_DEVICE} -f ${TOP}.fasm ${PARTNAME_OPT} -b ${TOP}.bit
+	${SOURCE_OPTS} cd ${BUILDDIR} && $(EDALIZE_LAUNCHER) ${TOOLCHAIN_PREFIX}write_bitstream -d ${BITSTREAM_DEVICE} -f ${TOP}.fasm ${PARTNAME_OPT} -b ${TOP}.bit
+
+{% if fasm2bels %}
+timing_summary.rpt: ${TOP}.bit.v
+	bash vivado.sh
+
+${TOP}.bit.v:
+	${SOURCE_OPTS} python -m fasm2bels \
+		--db_root {{ dbroot }}/${BITSTREAM_DEVICE} \
+		--part ${PARTNAME} \
+		--bitread bitread \
+		--bit_file ${TOP}.bit \
+		--fasm_file ${TOP}.bit.fasm \
+		--eblif ${TOP}.eblif \
+		--connection_database channels.db \
+		--rr_graph ${RR_GRAPH} \
+		--route_file ${TOP}.route \
+		--vpr_grid_map ${VPR_GRID} \
+		--vpr_capnp_schema_dir ${VPR_CAPNP_SCHEMA_DIR} \
+		${PCF_FASM2BELS_OPTS} \
+		--verilog_file ${TOP}.bit.v \
+		--xdc_file ${TOP}.bit.xdc
+	rm channels.db
+
+{% endif %}
 
 clean:
-	$(EDALIZE_LAUNCHER) rm -rf *.log *.rpt *.place *.bit *.eblif *.fasm *.json *.ioplace *.net *.route
-
+	$(EDALIZE_LAUNCHER) rm -rf ${BUILDDIR}

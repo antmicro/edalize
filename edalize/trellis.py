@@ -38,11 +38,15 @@ class Trellis(Edatool):
                     'members' : combined_members,
                     'lists' : combined_lists}
 
+    def check_args(self, unknown):
+        Yosys.validate_args(unknown)
+
     def configure_main(self):
         # Write yosys script file
         (src_files, incdirs) = self._get_fileset_files()
         yosys_synth_options = self.tool_options.get('yosys_synth_options', [])
         yosys_synth_options = ["-nomux"] + yosys_synth_options
+
         yosys_edam = {
                 'files'         : self.files,
                 'name'          : self.name,
@@ -57,7 +61,7 @@ class Trellis(Edatool):
                 }
 
         yosys = getattr(import_module("edalize.yosys"), 'Yosys')(yosys_edam, self.work_root)
-        yosys.configure()
+        yosys.configure(self.args)
 
         lpf_files = []
         for f in src_files:
