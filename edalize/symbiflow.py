@@ -61,6 +61,26 @@ class Symbiflow(Edatool):
                         "type": "String",
                         "desc": "Additional vpr tool options. If not used, default options for the tool will be used",
                     },
+                    {
+                        "name": "fasm2bels",
+                        "type": "Boolean",
+                        "desc": "Value to state whether fasm2bels is to be used."
+                    },
+                    {
+                        "name": "dbroot",
+                        "type": "String",
+                        "desc": "Path to the database root (needed by fasm2bels)."
+                    },
+                    {
+                        "name": "clocks",
+                        "type": "dict",
+                        "desc": "Clocks to be added for having tools correctly handling timing based routing."
+                    },
+                    {
+                        "name": "seed",
+                        "type": "String",
+                        "desc": "Seed assigned to the PnR tool."
+                    },
                 ]
             }
 
@@ -138,17 +158,51 @@ class Symbiflow(Edatool):
 
         placement_constraints = None
         pins_constraints = None
+        rr_graph = None
+        vpr_grid = None
+        vpr_capnp_schema = None
         for f in src_files:
             if f.file_type in ["PCF"]:
                 pins_constraints = f.name
             if f.file_type in ["xdc"]:
                 placement_constraints = f.name
+            if f.file_type in ["RRGraph"]:
+                rr_graph = f.name
+            if f.file_type in ["VPRGrid"]:
+                vpr_grid = f.name
+            if f.file_type in ["capnp"]:
+                vpr_capnp_schema = f.name
+
+        fasm2bels = self.tool_options.get("fasm2bels", False)
+        dbroot = self.tool_options.get("dbroot", None)
+        clocks = self.tool_options.get("clocks", None)
+
+        if fasm2bels:
+            if any(v is None for v in [rr_graph, vpr_grid, dbroot]):
+                logger.error("When using fasm2bels, rr_graph, vpr_grid and dbroot must be provided")
+
+            tcl_params = {
+                "top": self.name,
+                "part": partname,
+                "xdc": placement_constraints,
+                "clocks": clocks,
+            }
+
+            self.render_template("symbiflow-fasm2bels-tcl.j2",
+                                 "fasm2bels_vivado.tcl",
+                                 tcl_params)
+
         vendor = self.tool_options.get("vendor", None)
 
         makefile_params = {
             "top" : self.name,
             "partname" : partname,
             "bitstream_device" : bitstream_device,
+            "fasm2bels": fasm2bels,
+            "rr_graph": rr_graph,
+            "vpr_grid": vpr_grid,
+            "vpr_capnp_schema": vpr_capnp_schema,
+            "dbroot": dbroot,
         }
 
         self.render_template("symbiflow-nextpnr-{}-makefile.j2".format(arch),
@@ -168,6 +222,9 @@ class Symbiflow(Edatool):
         pins_constraints = []
         placement_constraints = []
         user_files = []
+        vpr_grid = None
+        rr_graph = None
+        vpr_capnp_schema = None
 
         for f in src_files:
             if f.file_type in ["verilogSource"]:
@@ -180,6 +237,12 @@ class Symbiflow(Edatool):
                 placement_constraints.append(f.name)
             if f.file_type in ["user"]:
                 user_files.append(f.name)
+            if f.file_type in ["RRGraph"]:
+                rr_graph = f.name
+            if f.file_type in ["VPRGrid"]:
+                vpr_grid = f.name
+            if f.file_type in ["capnp"]:
+                vpr_capnp_schema = f.name
 
         part = self.tool_options.get("part", None)
         package = self.tool_options.get("package", None)
@@ -205,12 +268,35 @@ class Symbiflow(Edatool):
             if part == "xc7a35t":
                 part = "xc7a50t"
             device_suffix = "test"
+            toolchain_prefix = 'symbiflow_'
         elif vendor == "quicklogic":
             partname = package
             device_suffix = "wlcsp"
             bitstream_device = part + "_" + device_suffix
+            toolchain_prefix = ""
 
         vpr_options = self.tool_options.get("vpr_options", None)
+
+        fasm2bels = self.tool_options.get("fasm2bels", False)
+        dbroot = self.tool_options.get("dbroot", None)
+        clocks = self.tool_options.get("clocks", None)
+
+        if fasm2bels:
+            if any(v is None for v in [rr_graph, vpr_grid, dbroot]):
+                logger.error("When using fasm2bels, rr_graph, vpr_grid and database root must be provided")
+
+            tcl_params = {
+                "top": self.toplevel,
+                "part": partname,
+                "xdc": " ".join(placement_constraints),
+                "clocks": clocks,
+            }
+
+            self.render_template("symbiflow-fasm2bels-tcl.j2",
+                                 "fasm2bels_vivado.tcl",
+                                 tcl_params)
+
+        seed = self.tool_options.get("seed", None)
 
         makefile_params = {
             "top": self.toplevel,
@@ -222,8 +308,14 @@ class Symbiflow(Edatool):
             "pcf": " ".join(pins_constraints),
             "xdc": " ".join(placement_constraints),
             "vpr_options": vpr_options,
+            "fasm2bels": fasm2bels,
+            "rr_graph": rr_graph,
+            "vpr_grid": vpr_grid,
+            "vpr_capnp_schema": vpr_capnp_schema,
+            "dbroot": dbroot,
+            "seed": seed,
             "device_suffix": device_suffix,
-            "toolchain_prefix": "symbiflow_",
+            "toolchain_prefix": toolchain_prefix,
             "vendor": vendor,
         }
         self.render_template("symbiflow-vpr-makefile.j2", "Makefile", makefile_params)

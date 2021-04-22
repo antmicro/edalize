@@ -38,6 +38,7 @@ setup(
         'templates/symbiflow/symbiflow-vpr-makefile.j2',
         'templates/symbiflow/symbiflow-nextpnr-xilinx-makefile.j2',
         'templates/symbiflow/symbiflow-nextpnr-fpga_interchange-makefile.j2',
+        'templates/symbiflow/symbiflow-fasm2bels-tcl.j2',
         'templates/libero/libero-project.tcl.j2',
         'templates/libero/libero-run.tcl.j2',
         'templates/libero/libero-syn-user.tcl.j2',
