@@ -13,11 +13,6 @@ class Surelog(Edatool):
     def get_doc(cls, api_ver):
         if api_ver == 0:
             return {'description' : "Surelog",
-                    "members" : [
-                        {'name' : 'library_files',
-                         'type' : 'String',
-                         'desc' : 'List of the library files for Surelog'},
-                        ],
                     'lists' : [
                         {'name' : 'surelog_options',
                          'type' : 'String',
@@ -34,15 +29,8 @@ class Surelog(Edatool):
             if f.file_type.startswith('systemVerilogSource'):
                 systemverilog_file_list.append("-sv " + f.name)
 
-        library_files = self.tool_options.get('library_files', None)
         surelog_options = self.tool_options.get('surelog_options', [])
-
-        if library_files:
-            print(library_files)
-            library_files = library_files.split(",")
-
-        pattern = len(library_files) * " -v %s"
-        library_command = pattern % tuple(library_files)
+        arch = self.tool_options.get('arch', None)
 
         pattern = len(self.vlogparam.keys()) * " -P%s=%%s"
         verilog_params_command = pattern % tuple(self.vlogparam.keys()) % tuple(self.vlogparam.values())
@@ -60,7 +48,7 @@ class Surelog(Edatool):
                 'name'                      : self.name,
                 'sources'                   : ' '.join(verilog_file_list),
                 'sv_sources'                : ' '.join(systemverilog_file_list),
-                'library_command'           : library_command,
+                'arch'                      : arch,
                 'verilog_params_command'    : verilog_params_command,
                 'verilog_defines_command'   : verilog_defines_command,
                 'include_files_command'     : include_files_command,

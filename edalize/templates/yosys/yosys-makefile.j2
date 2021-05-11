@@ -8,17 +8,17 @@ all: $(TARGET).{{ default_target }}
 {{ top }}.uhdm:
 	$(MAKE) -f surelog.mk
 
-DEPENDENCIES := {{ top }}.uhdm {{ yosys_template }} }}
+DEPENDENCIES := {{ top }}.uhdm {{ yosys_template }}
 {% else %}
-DEPENDENCIES := {{ yosys_template }} }}
+DEPENDENCIES := {{ yosys_template }}
 {%- endif %}
 
 %.blif: ${DEPENDENCIES}
-	$(EDALIZE_LAUNCHER) yosys -l yosys.log -p "tcl {{ yosys_template }} }}"
+	$(EDALIZE_LAUNCHER) yosys -l yosys.log -p "tcl {{ yosys_template }}"
 %.json: ${DEPENDENCIES}
-	$(EDALIZE_LAUNCHER) yosys -l yosys.log -p "tcl {{ yosys_template }} }}"
+	$(EDALIZE_LAUNCHER) yosys -l yosys.log -p "tcl {{ yosys_template }}"
 %.edif: ${DEPENDENCIES}
-	$(EDALIZE_LAUNCHER) yosys -l yosys.log -p "tcl {{ yosys_template }} }}"
+	$(EDALIZE_LAUNCHER) yosys -l yosys.log -p "tcl {{ yosys_template }}"
 
 clean:
 	rm -f $(TARGET).blif $(TARGET).json $(TARGET).edif

@@ -58,9 +58,6 @@ class Vivado(Edatool):
                         {'name' : 'hw_target',
                         'type' : 'Description',
                         'desc' : 'Board identifier (e.g. */xilinx_tcf/Digilent/123456789123A'},
-                        {'name' : 'library_files',
-                         'type' : 'String',
-                         'desc' : 'List of the library files for Surelog'},
                     ],
                     'lists' : [
                         {'name' : 'yosys_synth_options',
@@ -127,7 +124,6 @@ class Vivado(Edatool):
                                             'yosys_read_options' : yosys_read_options,
                                             'yosys_as_subtool' : True,
                                             'script_name'   : 'yosys.tcl',
-                                            'library_files' : self.tool_options.get('library_files', []),
                                             'surelog_options' : self.tool_options.get('surelog_options', []),
                                             }
                                     }

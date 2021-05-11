@@ -58,6 +58,11 @@ class Yosys(Edatool):
         yosys_read_options = " ".join(self.tool_options.get('yosys_read_options', []))
         file_table = []
         yosys_synth_options = self.tool_options.get('yosys_synth_options', [])
+
+        arch = self.tool_options.get('arch', None)
+        if not arch:
+            logger.error("ERROR: arch is not defined.")
+
         use_surelog = False
         if "frontend=surelog" in yosys_synth_options:
             use_surelog = True
@@ -69,8 +74,8 @@ class Yosys(Edatool):
                     'toplevel'      : self.toplevel,
                     'parameters'    : self.parameters,
                     'tool_options'  : {'surelog' : {
-                                            'library_files' : self.tool_options.get('library_files', []),
                                             'surelog_options' : self.tool_options.get('surelog_options', []),
+                                            'arch'            : arch,
                                             }
                                     }
                     }
@@ -108,10 +113,6 @@ class Yosys(Edatool):
                 self.toplevel))
 
         output_format = self.tool_options.get('output_format', 'blif')
-        arch = self.tool_options.get('arch', None)
-
-        if not arch:
-            logger.error("ERROR: arch is not defined.")
 
         makefile_name = self.tool_options.get('makefile_name', self.name + '.mk')
         template_vars = {
