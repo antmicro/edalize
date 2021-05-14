@@ -54,6 +54,17 @@ class Vivado(Edatool):
                         {'name' : 'hw_target',
                         'type' : 'Description',
                         'desc' : 'Board identifier (e.g. */xilinx_tcf/Digilent/123456789123A'},
+                    ],
+                    'lists' : [
+                        {'name' : 'yosys_synth_options',
+                         'type' : 'String',
+                         'desc' : 'Additional options for the synth command'},
+                        {'name' : 'yosys_read_options',
+                         'type' : 'String',
+                         'desc' : 'Additional options for the Yosys\' read command'},
+                        {'name' : 'surelog_options',
+                         'type' : 'String',
+                         'desc' : 'Additional options for the Surelog'},
                     ]}
 
     """ Get tool version
@@ -82,19 +93,39 @@ class Vivado(Edatool):
      with the build steps.
     """
     def configure_main(self):
+        (src_files, incdirs) = self._get_fileset_files(force_slash=True)
 
-        synth_tool = self.tool_options.get("synth", "vivado")
+        self.jinja_env.filters["src_file_filter"] = self.src_file_filter
 
-        if synth_tool == "yosys":
+        has_vhdl = "vhdlSource" in [x.file_type for x in src_files]
+        has_vhdl2008 = "vhdlSource-2008" in [x.file_type for x in src_files]
+        has_xci = "xci" in [x.file_type for x in src_files]
 
-            self.edam['tool_options']['yosys'] = {
-                'arch' : 'xilinx',
-                'output_format' : 'edif',
-                'yosys_synth_options' : self.tool_options.get('yosys_synth_options', []),
-                'yosys_as_subtool' : True,
-            }
+        self.synth_tool = self.tool_options.get("synth", "vivado")
+        if self.synth_tool == "yosys":
+            if has_vhdl or has_vhdl2008:
+                logger.error("VHDL files are not supported in Yosys.")
 
-            yosys = Yosys(self.edam, self.work_root)
+            yosys_synth_options = self.tool_options.get('yosys_synth_options', [])
+            yosys_read_options = self.tool_options.get('yosys_read_options', [])
+            yosys_edam = {
+                    'files'         : self.files,
+                    'name'          : self.name,
+                    'toplevel'      : self.toplevel,
+                    'parameters'    : self.parameters,
+                    'tool_options'  : {'yosys' : {
+                                            'arch' : 'xilinx',
+                                            'output_format' : 'edif',
+                                            'yosys_synth_options' : yosys_synth_options,
+                                            'yosys_read_options' : yosys_read_options,
+                                            'yosys_as_subtool' : True,
+                                            'script_name'   : 'yosys.tcl',
+                                            'surelog_options' : self.tool_options.get('surelog_options', []),
+                                            }
+                                    }
+                    }
+
+            yosys = getattr(import_module("edalize.yosys"), 'Yosys')(yosys_edam, self.work_root)
             yosys.configure()
             self.files = yosys.edam['files']
 

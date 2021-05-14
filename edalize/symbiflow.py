@@ -9,7 +9,7 @@ import re
 import subprocess
 
 from edalize.edatool import Edatool
-from edalize.yosys import Yosys
+from edalize.surelog import Surelog
 from importlib import import_module
 
 logger = logging.getLogger(__name__)
@@ -71,14 +71,26 @@ class Symbiflow(Edatool):
                         "type": "String",
                         "desc": "Additional options for Nextpnr tool. If not used, default options for the tool will be used",
                     },
+                    {
+                        "name" : "yosys_frontend",
+                        "type" : "String",
+                        "desc" : 'Select yosys frontend. Currently "uhdm" and "verilog" frontends are supported.'
+                    },
+                ],
+                'lists' : [
+                        {'name' : 'surelog_options',
+                         'type' : 'String',
+                         'desc' : 'List of options for surelog'},
                 ],
             }
 
             symbiflow_members = symbiflow_help["members"]
+            symbiflow_lists = symbiflow_help["lists"]
 
             return {
                 "description": "The Symbiflow backend executes Yosys sythesis tool and VPR/Nextpnr place and route. It can target multiple different FPGA vendors",
                 "members": symbiflow_members,
+                "lists": symbiflow_lists,
             }
 
     def get_version(self):
@@ -233,19 +245,43 @@ endif
         if has_vhdl or has_vhdl2008:
             logger.error("VHDL files are not supported in Yosys")
         file_list = []
+        uhdm_list = []
         timing_constraints = []
         pins_constraints = []
         placement_constraints = []
 
+        yosys_frontend = self.tool_options.get('yosys_frontend', "verilog")
+
         for f in src_files:
-            if f.file_type in ["verilogSource"]:
-                file_list.append(f.name)
-            if f.file_type in ["SDC"]:
-                timing_constraints.append(f.name)
-            if f.file_type in ["PCF"]:
-                pins_constraints.append(f.name)
-            if f.file_type in ["xdc"]:
-                placement_constraints.append(f.name)
+                if f.file_type in ["SDC"]:
+                    timing_constraints.append(f.name)
+                if f.file_type in ["PCF"]:
+                    pins_constraints.append(f.name)
+                if f.file_type in ["xdc"]:
+                    placement_constraints.append(f.name)
+                if f.file_type in ["user"]:
+                    user_files.append(f.name)
+
+        if yosys_frontend in ["uhdm"]:
+            surelog_edam = {
+                    'files'         : self.files,
+                    'name'          : self.name,
+                    'toplevel'      : self.toplevel,
+                    'parameters'    : self.parameters,
+                    'tool_options'  : {'surelog' : {
+                                            'surelog_options' : self.tool_options.get('surelog_options', []),
+                                            }
+                                    }
+                    }
+
+            surelog = getattr(import_module("edalize.surelog"), 'Surelog')(surelog_edam, self.work_root)
+            surelog.configure()
+            self.vlogparam.clear() # vlogparams are handled by Surelog
+            uhdm_list.append(os.path.abspath(self.work_root + '/' + self.toplevel + '.uhdm'))
+        else:
+            for f in src_files:
+                if f.file_type in ["verilogSource", "systemVerilogSource"]:
+                    file_list.append(f.name)
 
         part = self.tool_options.get("part")
         package = self.tool_options.get("package")
@@ -276,60 +312,26 @@ endif
             device_suffix = "wlcsp"
             bitstream_device = part + "_" + device_suffix
 
-        _vo = self.tool_options.get("vpr_options")
-        vpr_options = ['--additional_vpr_options', f'"{_vo}"'] if _vo else []
-        pcf_opts = ['-p']+pins_constraints if pins_constraints else []
-        sdc_opts = ['-s']+timing_constraints if timing_constraints else []
-        xdc_opts = ['-x']+placement_constraints if placement_constraints else []
+        vpr_options = self.tool_options.get("vpr_options")
 
-        commands = self.EdaCommands()
-        #Synthesis
-        targets = self.toplevel+'.eblif'
-        command = ['symbiflow_synth', '-t', self.toplevel]
-        command += ['-v'] + file_list
-        command += ['-d', bitstream_device]
-        command += ['-p' if vendor == 'xilinx' else '-P', partname]
-        command += xdc_opts
-        commands.add(command, [targets], [])
+        print(uhdm_list)
 
-        #P&R
-        eblif_opt = ['-e', self.toplevel+'.eblif']
-        device_opt = ['-d', part+'_'+device_suffix]
-
-        depends = self.toplevel+'.eblif'
-        targets = self.toplevel+'.net'
-        command = ['symbiflow_pack'] + eblif_opt + device_opt + sdc_opts + vpr_options
-        commands.add(command, [targets], [depends])
-
-        depends = self.toplevel+'.net'
-        targets = self.toplevel+'.place'
-        command = ['symbiflow_place'] + eblif_opt + device_opt
-        command += ['-n', depends, '-P', partname]
-        command += sdc_opts + pcf_opts + vpr_options
-        commands.add(command, [targets], [depends])
-
-        depends = self.toplevel+'.place'
-        targets = self.toplevel+'.route'
-        command = ['symbiflow_route'] + eblif_opt + device_opt
-        command += sdc_opts + vpr_options
-        commands.add(command, [targets], [depends])
-
-        depends = self.toplevel+'.route'
-        targets = self.toplevel+'.fasm'
-        command = ['symbiflow_write_fasm'] + eblif_opt + device_opt
-        command += sdc_opts + vpr_options
-        commands.add(command, [targets], [depends])
-
-        depends = self.toplevel+'.fasm'
-        targets = self.toplevel+'.bit'
-        command = ['symbiflow_write_bitstream'] + ['-d', bitstream_device]
-        command += ['-f', depends]
-        command += ['-p' if vendor == 'xilinx' else '-P', partname]
-        command += ['-b', targets]
-        commands.add(command, [targets], [depends])
-
-        commands.set_default_target(targets)
-        commands.write(os.path.join(self.work_root, 'Makefile'))
+        makefile_params = {
+            "top": self.toplevel,
+            "sources": " ".join(file_list),
+            "uhdm": " ".join(uhdm_list),
+            "partname": partname,
+            "part": part,
+            "bitstream_device": bitstream_device,
+            "sdc": " ".join(timing_constraints),
+            "pcf": " ".join(pins_constraints),
+            "xdc": " ".join(placement_constraints),
+            "vpr_options": vpr_options,
+            "device_suffix": device_suffix,
+            "toolchain_prefix": "symbiflow_",
+            "vendor": vendor,
+        }
+        self.render_template("symbiflow-vpr-makefile.j2", "Makefile", makefile_params)
 
     def configure_main(self):
         if self.tool_options.get("pnr") == "nextpnr":
