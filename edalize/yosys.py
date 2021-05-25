@@ -6,6 +6,9 @@ import logging
 import os.path
 
 from edalize.edatool import Edatool
+from edalize.surelog import Surelog
+from edalize.sv2v import Sv2v
+from importlib import import_module
 
 logger = logging.getLogger(__name__)
 
@@ -33,34 +36,83 @@ class Yosys(Edatool):
                         {'name' : 'yosys_template',
                          'type' : 'String',
                          'desc' : 'TCL template file to use instead of default template'},
+                        {'name' : 'library_files',
+                         'type' : 'String',
+                         'desc' : 'List of the library files for Surelog'},
                         ],
                     'lists' : [
+                        {'name' : 'yosys_read_options',
+                         'type' : 'String',
+                         'desc' : 'Addtional options for the read_* command (e.g. read_verlog or read_uhdm)'},
                         {'name' : 'yosys_synth_options',
                          'type' : 'String',
                          'desc' : 'Additional options for the synth command'},
+                        {'name' : 'surelog_options',
+                         'type' : 'String',
+                         'desc' : 'Additional options for the Yosys frontend'},
                         ]}
 
     def configure_main(self):
         # write Yosys tcl script file
 
         yosys_template = self.tool_options.get('yosys_template')
+        yosys_read_options = " ".join(self.tool_options.get('yosys_read_options', []))
+
+        arch = self.tool_options.get('arch', None)
+        if not arch:
+            logger.error("ERROR: arch is not defined.")
+
+        self.edam['tool_options'] = \
+            {'surelog' : {
+                'arch' : arch,
+                'surelog_options' : self.tool_options.get('surelog_options', []),
+                'library_files' : self.tool_options.get('library_files', []),
+                'surelog_as_subtool' : True,
+            },
+             'sv2v' : {
+                'sv2v_options' : self.tool_options.get('surelog_options', []),
+                'sv2v_as_subtool' : True,
+            },
+            }
+        yosys_synth_options = self.tool_options.get('yosys_synth_options', [])
+        use_surelog = False
+        use_sv2v = False
+
+        if "frontend=surelog" in yosys_synth_options:
+            use_surelog = True
+            yosys_synth_options.remove("frontend=surelog")
+        elif "frontend=sv2v" in yosys_synth_options:
+            use_sv2v = True
+            yosys_synth_options.remove("frontend=sv2v")
+
+        if use_surelog:
+            surelog = Surelog(self.edam, self.work_root)
+            surelog.configure()
+            self.vlogparam.clear() # vlogparams are handled by Surelog
+            self.vlogdefine.clear() # vlogdefines are handled by Surelog
+        elif use_sv2v:
+            sv2v = Sv2v(self.edam, self.work_root)
+            sv2v.configure()
 
         incdirs = []
         file_table = []
         unused_files = []
-
-        for f in self.files:
+        sv_files = []
+        for f in self.edam['files']:
             cmd = ""
-            if f['file_type'].startswith('verilogSource'):
-                cmd = 'read_verilog'
-            elif f['file_type'].startswith('systemVerilogSource'):
-                cmd = 'read_verilog -sv'
-            elif f['file_type'] == 'tclSource':
-                cmd = 'source'
+            if f.get('file_type','').startswith('verilogSource'):
+                cmd = 'read_verilog '
+            elif f.get('file_type','').startswith('systemVerilogSource'):
+                cmd = 'read_verilog -sv '
+                sv_files += [os.path.splitext(f['name'])[0] + ".v"]
+            elif f.get('file_type','') == 'tclSource':
+                cmd = 'source '
+            elif f.get('file_type','') == 'uhdm':
+                cmd = 'read_uhdm '
 
             if cmd:
                 if not self._add_include_dir(f, incdirs):
-                    file_table.append(cmd + ' {' + f['name'] + '}')
+                    file_table.append(cmd + yosys_read_options + ' {' + f['name'] + '}')
             else:
                 unused_files.append(f)
 
@@ -71,6 +123,7 @@ class Yosys(Edatool):
             {'name' : self.name+'.json', 'file_type' : 'jsonNetlist'},
         ]
         self.edam['files'] += of
+
 
         verilog_defines = []
         for key, value in self.vlogdefine.items():
@@ -85,11 +138,8 @@ class Yosys(Edatool):
                 self._param_value_str(value),
                 self.toplevel))
 
-        output_format = self.tool_options.get('output_format', 'blif')
-        arch = self.tool_options.get('arch', None)
 
-        if not arch:
-            logger.error("ERROR: arch is not defined.")
+        output_format = self.tool_options.get('output_format', 'blif')
 
         template = yosys_template or 'edalize_yosys_template.tcl'
         template_vars = {
@@ -103,10 +153,11 @@ class Yosys(Edatool):
                 'write_command'       : "write_" + output_format,
                 'default_target'      : output_format,
                 'edif_opts'           : '-pvector bra' if arch=='xilinx' else '',
-                'yosys_template'      : template,
-                'name'                : self.name
+                'yosys_template'      : yosys_template or 'edalize_yosys_template.tcl',
+                'name'                : self.name,
+                'use_surelog'         : use_surelog,
+                'use_sv2v'            : use_sv2v,
         }
-
         self.render_template('edalize_yosys_procs.tcl.j2',
                              'edalize_yosys_procs.tcl',
                              template_vars)
@@ -117,9 +168,23 @@ class Yosys(Edatool):
                                  template_vars)
 
         commands = self.EdaCommands()
+        additional_deps = []
+        if use_surelog:
+            target = self.toplevel + '.uhdm'
+            depends = ''
+            command = ['make', '-f', "surelog.mk"]
+            commands.add(command, [target], [depends])
+            additional_deps = target
+        elif use_sv2v:
+            targets = sv_files
+            depends = ''
+            command = ['make', '-f', "sv2v.mk"]
+            commands.add(command, [targets], [depends])
+            additional_deps = targets
+
         commands.add(['yosys', '-l', 'yosys.log', '-p', f'"tcl {template}"'],
                          [f'{self.name}.{output}' for output in ['blif', 'json','edif']],
-                         [template])
+                         [template, additional_deps])
         if self.tool_options.get('yosys_as_subtool'):
             self.commands = commands.commands
         else:

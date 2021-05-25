@@ -9,7 +9,7 @@ import re
 import subprocess
 
 from edalize.edatool import Edatool
-from edalize.yosys import Yosys
+from edalize.surelog import Surelog
 from importlib import import_module
 
 logger = logging.getLogger(__name__)
@@ -71,14 +71,31 @@ class Symbiflow(Edatool):
                         "type": "String",
                         "desc": "Additional options for Nextpnr tool. If not used, default options for the tool will be used",
                     },
+                    {
+                        "name" : "yosys_frontend",
+                        "type" : "String",
+                        "desc" : 'Select yosys frontend. Currently "uhdm" and "verilog" frontends are supported.'
+                    },
+                    {
+                        "name" : "library_files",
+                        "type" : "String",
+                        "desc" : "list of the library files for surelog"
+                    }
+                ],
+                'lists' : [
+                        {'name' : 'surelog_options',
+                         'type' : 'String',
+                         'desc' : 'List of options for yosys frontend'},
                 ],
             }
 
             symbiflow_members = symbiflow_help["members"]
+            symbiflow_lists = symbiflow_help["lists"]
 
             return {
                 "description": "The Symbiflow backend executes Yosys sythesis tool and VPR/Nextpnr place and route. It can target multiple different FPGA vendors",
                 "members": symbiflow_members,
+                "lists": symbiflow_lists,
             }
 
     def get_version(self):
@@ -88,31 +105,33 @@ class Symbiflow(Edatool):
         (src_files, incdirs) = self._get_fileset_files(force_slash=True)
         vendor = self.tool_options.get("vendor")
 
-        # Yosys configuration
-        yosys_synth_options = self.tool_options.get("yosys_synth_options", "")
-        yosys_template = self.tool_options.get("yosys_template")
-        yosys_edam = {
-                "files"         : self.files,
-                "name"          : self.name,
-                "toplevel"      : self.toplevel,
-                "parameters"    : self.parameters,
-                "tool_options"  : {
-                                    "yosys" : {
-                                        "arch" : vendor,
-                                        "yosys_synth_options" : yosys_synth_options,
-                                        "yosys_template" : yosys_template,
-                                        "yosys_as_subtool" : True,
-                                    }
-                                }
-                }
-
-        yosys = getattr(import_module("edalize.yosys"), "Yosys")(yosys_edam, self.work_root)
-        yosys.configure()
-
         # Nextpnr configuration
         arch = self.tool_options.get("arch")
         if arch not in self.archs:
             logger.error('Missing or invalid "arch" parameter: {} in "tool_options"'.format(arch))
+
+        # Yosys configuration
+        yosys_synth_options = self.tool_options.get("yosys_synth_options", "")
+        yosys_template = self.tool_options.get("yosys_template")
+        self.edam['tool_options'] = \
+            {"yosys" : {
+                "arch" : vendor,
+                "yosys_synth_options" : yosys_synth_options,
+                "yosys_template" : yosys_template,
+                "yosys_as_subtool" : True,
+                'surelog_options' : self.tool_options.get('surelog_options', []),
+            },
+             "surelog" : {
+                'library_files' : self.tool_options.get('library_files', []),
+                'arch' : arch,
+                'surelog_options' : self.tool_options.get('surelog_options', []),
+                'surelog_as_subtool' : True,
+            },
+            }
+
+        yosys = Yosys(self.edam, self.work_root)
+        yosys.configure()
+
 
         package = self.tool_options.get("package")
         if not package:
@@ -135,7 +154,7 @@ class Symbiflow(Edatool):
         device = None
         placement_constraints = []
 
-        for f in src_files:
+        for f in self.edam['files']:
             if f.file_type in ["bba"]:
                 chipdb = f.name
             elif f.file_type in ["device"]:
@@ -233,12 +252,25 @@ endif
         if has_vhdl or has_vhdl2008:
             logger.error("VHDL files are not supported in Yosys")
         file_list = []
+        uhdm_list = []
         timing_constraints = []
         pins_constraints = []
         placement_constraints = []
+        user_files = []
+
+        arch = self.tool_options.get("arch")
+        if not arch:
+            logger.error("ERROR: arch is not defined.")
+
+        yosys_frontend = self.tool_options.get('yosys_frontend', "verilog")
+        uhdm_mode = False
+        if yosys_frontend in ["uhdm"]:
+            uhdm_mode = True
 
         for f in src_files:
-            if f.file_type in ["verilogSource"]:
+            if f.file_type in ["user"]:
+                user_files.append(f.name)
+            elif f.file_type in ["systemVerilogSource"]:
                 file_list.append(f.name)
             if f.file_type in ["SDC"]:
                 timing_constraints.append(f.name)
@@ -246,6 +278,18 @@ endif
                 pins_constraints.append(f.name)
             if f.file_type in ["xdc"]:
                 placement_constraints.append(f.name)
+        if uhdm_mode:
+            self.edam['tool_options'] = \
+                {"surelog" : {
+                    'arch' : arch,
+                    'surelog_options' : self.tool_options.get('surelog_options', []),
+                    'surelog_as_subtool' : True,
+                },
+                }
+            surelog = Surelog(self.edam, self.work_root)
+            surelog.configure()
+            self.vlogparam.clear() # vlogparams are handled by Surelog
+            uhdm_list += [os.path.abspath(self.work_root + '/' + self.toplevel + '.uhdm')]
 
         part = self.tool_options.get("part")
         package = self.tool_options.get("package")
@@ -283,20 +327,28 @@ endif
         xdc_opts = ['-x']+placement_constraints if placement_constraints else []
 
         commands = self.EdaCommands()
+        if uhdm_mode:
+            depends = []
+            targets = [self.toplevel + '.uhdm']
+            command = ['make', '-f', 'surelog.mk']
+            commands.add(command, [targets], depends)
         #Synthesis
         targets = self.toplevel+'.eblif'
+        depends = []
+        if uhdm_mode:
+            depends = [self.toplevel + '.uhdm']
         command = ['symbiflow_synth', '-t', self.toplevel]
-        command += ['-v'] + file_list
+        command += [['-v'] + file_list] if uhdm_mode else [self.toplevel + '.uhdm']
         command += ['-d', bitstream_device]
         command += ['-p' if vendor == 'xilinx' else '-P', partname]
         command += xdc_opts
-        commands.add(command, [targets], [])
+        commands.add(command, [targets], depends)
 
         #P&R
         eblif_opt = ['-e', self.toplevel+'.eblif']
         device_opt = ['-d', part+'_'+device_suffix]
 
-        depends = self.toplevel+'.eblif'
+        depends = [self.toplevel+'.eblif']
         targets = self.toplevel+'.net'
         command = ['symbiflow_pack'] + eblif_opt + device_opt + sdc_opts + vpr_options
         commands.add(command, [targets], [depends])
@@ -327,6 +379,7 @@ endif
         command += ['-p' if vendor == 'xilinx' else '-P', partname]
         command += ['-b', targets]
         commands.add(command, [targets], [depends])
+
 
         commands.set_default_target(targets)
         commands.write(os.path.join(self.work_root, 'Makefile'))

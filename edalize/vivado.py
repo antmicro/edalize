@@ -54,6 +54,20 @@ class Vivado(Edatool):
                         {'name' : 'hw_target',
                         'type' : 'Description',
                         'desc' : 'Board identifier (e.g. */xilinx_tcf/Digilent/123456789123A'},
+                        {'name' : 'library_files',
+                         'type' : 'String',
+                         'desc' : 'List of the library files for Surelog'},
+                    ],
+                    'lists' : [
+                        {'name' : 'yosys_synth_options',
+                         'type' : 'String',
+                         'desc' : 'Additional options for the synth command'},
+                        {'name' : 'yosys_read_options',
+                         'type' : 'String',
+                         'desc' : 'Additional options for the Yosys\' read command'},
+                        {'name' : 'surelog_options',
+                         'type' : 'String',
+                         'desc' : 'Additional options for the Yosys frontend'},
                     ]}
 
     """ Get tool version
@@ -82,18 +96,31 @@ class Vivado(Edatool):
      with the build steps.
     """
     def configure_main(self):
+        (src_files, incdirs) = self._get_fileset_files(force_slash=True)
 
-        synth_tool = self.tool_options.get("synth", "vivado")
+        has_vhdl = "vhdlSource" in [x.file_type for x in src_files]
+        has_vhdl2008 = "vhdlSource-2008" in [x.file_type for x in src_files]
+        has_xci = "xci" in [x.file_type for x in src_files]
 
-        if synth_tool == "yosys":
+        self.synth_tool = self.tool_options.get("synth", "vivado")
+        if self.synth_tool == "yosys":
+            if has_vhdl or has_vhdl2008:
+                logger.error("VHDL files are not supported in Yosys.")
 
-            self.edam['tool_options']['yosys'] = {
-                'arch' : 'xilinx',
-                'output_format' : 'edif',
-                'yosys_synth_options' : self.tool_options.get('yosys_synth_options', []),
-                'yosys_as_subtool' : True,
-            }
-
+            yosys_synth_options = self.tool_options.get('yosys_synth_options', [])
+            yosys_read_options = self.tool_options.get('yosys_read_options', [])
+            self.edam['tool_options'] = \
+                {'yosys' : {
+                    'arch' : 'xilinx',
+                    'output_format' : 'edif',
+                    'yosys_synth_options' : yosys_synth_options,
+                    'yosys_read_options' : yosys_read_options,
+                    'yosys_as_subtool' : True,
+                    'script_name'   : 'yosys.tcl',
+                    'surelog_options' : self.tool_options.get('surelog_options', []),
+                    'library_files' : self.tool_options.get('library_files', []),
+                    }
+                }
             yosys = Yosys(self.edam, self.work_root)
             yosys.configure()
             self.files = yosys.edam['files']
@@ -107,30 +134,30 @@ class Vivado(Edatool):
 
         for f in self.files:
             cmd = ""
-            if f['file_type'].startswith('verilogSource'):
+            if f.get('file_type', '').startswith('verilogSource'):
                 cmd = 'read_verilog'
-            elif f['file_type'].startswith('systemVerilogSource'):
+            elif f.get('file_type', '').startswith('systemVerilogSource'):
                 cmd = 'read_verilog -sv'
-            elif f['file_type'] == 'tclSource':
+            elif f.get('file_type') == 'tclSource':
                 cmd = 'source'
-            elif f['file_type'] == 'edif':
+            elif f.get('file_type') == 'edif':
                 cmd = 'read_edif'
                 edif_files.append(f['name'])
-            elif f['file_type'].startswith('vhdlSource'):
+            elif f.get('file_type', '').startswith('vhdlSource'):
                 cmd = 'read_vhdl'
-                if f['file_type'] == 'vhdlSource-2008':
+                if f.get('file_type') == 'vhdlSource-2008':
                     has_vhdl2008 = True
                     cmd += ' -vhdl2008'
                 if f.get('logical_name'):
                     cmd += ' -library '+f['logical_name']
-            elif f['file_type'] == 'xci':
+            elif f.get('file_type') == 'xci':
                 cmd = 'read_ip'
                 has_xci = True
-            elif f['file_type'] == 'xdc':
+            elif f.get('file_type') == 'xdc':
                 cmd = 'read_xdc'
-            elif f['file_type'] == 'SDC':
+            elif f.get('file_type') == 'SDC':
                 cmd = 'read_xdc -unmanaged'
-            elif f['file_type'] == 'mem':
+            elif f.get('file_type') == 'mem':
                 cmd = 'read_mem'
 
             if cmd:
@@ -186,7 +213,7 @@ class Vivado(Edatool):
         commands.add(vivado_command+tcl_file, [project_file], tcl_file + edif_files)
 
         #Synthesis target
-        if synth_tool == 'yosys':
+        if self.synth_tool == 'yosys':
             commands.commands += yosys.commands
             commands.add([], ['synth'], edif_files)
         else:
