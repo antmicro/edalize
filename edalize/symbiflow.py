@@ -78,9 +78,9 @@ class Symbiflow(Edatool):
                     },
                 ],
                 'lists' : [
-                        {'name' : 'surelog_options',
+                        {'name' : 'frontend_options',
                          'type' : 'String',
-                         'desc' : 'List of options for surelog'},
+                         'desc' : 'List of options for yosys frontend'},
                 ],
             }
 
@@ -269,7 +269,7 @@ endif
                     'toplevel'      : self.toplevel,
                     'parameters'    : self.parameters,
                     'tool_options'  : {'surelog' : {
-                                            'surelog_options' : self.tool_options.get('surelog_options', []),
+                                            'surelog_options' : self.tool_options.get('frontend_options', []),
                                             }
                                     }
                     }

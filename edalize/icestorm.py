@@ -15,19 +15,37 @@ class Icestorm(Edatool):
     @classmethod
     def get_doc(cls, api_ver):
         if api_ver == 0:
-            options = {
-                'members' : [
-                    {'name' : 'pnr',
-                     'type' : 'String',
-                     'desc' : 'Select Place & Route tool. Legal values are *arachne* for Arachne-PNR, *next* for nextpnr or *none* to only perform synthesis. Default is next'},
-                ],
-                'lists' : [
-                    {'name' : 'arachne_pnr_options',
-                     'type' : 'String',
-                     'desc' : 'Additional options for Arachnhe PNR'},
-                ]}
-            Edatool._extend_options(options, Yosys)
-            Edatool._extend_options(options, Nextpnr)
+            yosys_help = Yosys.get_doc(api_ver)
+            icestorm_help = {
+                    'members' : [
+                        {'name' : 'pnr',
+                         'type' : 'String',
+                         'desc' : 'Select Place & Route tool. Legal values are *arachne* for Arachne-PNR, *next* for nextpnr or *none* to only perform synthesis. Default is next'}],
+                    'lists' : [
+                        {'name' : 'arachne_pnr_options',
+                         'type' : 'String',
+                         'desc' : 'Additional options for Arachnhe PNR'},
+                        {'name' : 'nextpnr_options',
+                         'type' : 'String',
+                         'desc' : 'Additional options for nextpnr'},
+                        {'name' : 'yosys_synth_options',
+                         'type' : 'String',
+                         'desc' : 'Additional options for the synth_ice40 command'},
+                        {'name' : 'yosys_read_options',
+                         'type' : 'String',
+                         'desc' : 'Addtional options for the read_* command (e.g. read_verlog or read_uhdm)'},
+                        {'name' : 'frontend_options',
+                         'type' : 'String',
+                         'desc' : 'Additional options for the Yosys frontend'},
+                        ]}
+
+            combined_members = icestorm_help['members']
+            combined_lists = icestorm_help['lists']
+            yosys_members = yosys_help['members']
+            yosys_lists = yosys_help['lists']
+
+            combined_members.extend(m for m in yosys_members if m['name'] not in [i['name'] for i in combined_members])
+            combined_lists.extend(l for l in yosys_lists if l['name'] not in [i['name'] for i in combined_lists])
 
             return {'description' : "Open source toolchain for Lattice iCE40 FPGAs. Uses yosys for synthesis and arachne-pnr or nextpnr for Place & Route",
                     'members' : options['members'],
@@ -39,7 +57,7 @@ class Icestorm(Edatool):
         yosys_synth_options   = self.tool_options.get('yosys_synth_options', [])
         yosys_read_options    = self.tool_options.get('yosys_read_options', [])
         yosys_synth_options   = ["-nomux"] + yosys_synth_options
-
+        frontend_options      = self.tool_options.get('frontedn_options',[])
         yosys_edam = {
                 'files'         : self.files,
                 'name'          : self.name,
@@ -51,7 +69,7 @@ class Icestorm(Edatool):
                                         'yosys_read_options' : yosys_read_options,
                                         'yosys_as_subtool' : True,
                                         'yosys_template' : self.tool_options.get('yosys_template'),
-                                        'surelog_options' : surelog_options,
+                                        'frontend_options' : frontend_options,
                                         }
                                 }
                 }
