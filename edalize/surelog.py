@@ -47,20 +47,25 @@ class Surelog(Edatool):
         pattern = len(incdirs) * " -I%s"
         include_files_command = pattern % tuple(incdirs)
 
+        yosys_conf_out = subprocess.run(['yosys-config', '--datdir'],
+                        capture_output=True)
+        yosys_conf_path = yosys_conf_out.output.decode('ascii').strip()
+        library_command = []
+        if arch in ['ecp5', 'ice40']:
+            library_command = ['-v', yosys_conf_path+'/'+arch+'/cells_bb.v']
+        else:
+            library_command = ['-v', yosys_conf_path+'/'+arch+'/cells_xtra_surelog.v', '-v', yosys_conf_path+'/'+arch+'/cells_sim.v']
+        
 
-        template_vars = {
-                'top'                       : self.toplevel,
-                'name'                      : self.name,
-                'sources'                   : ' '.join(verilog_file_list),
-                'sv_sources'                : ' '.join(systemverilog_file_list),
-                'arch'                      : arch,
-                'verilog_params_command'    : verilog_params_command,
-                'verilog_defines_command'   : verilog_defines_command,
-                'include_files_command'     : include_files_command,
-                'surelog_options'           : ' '.join(surelog_options),
-        }
+        commands = self.EdaCommands()
+        commands.commands = yosys.commands
+        commands.set_default_target(self.toplevel+'.uhdm')
+        depends = self.toplevel
+        target = self.toplevel
+        command_1 = ['surelog', ' '.join(surelog_options), '-parse', library_command,
+                verilog_defines_command, verilog_params_command,
+                include_files_command, ' '.join(verilog_file_list),
+                ' '.join(systemverilog_file_list)]
+        command_2 = ['cp', 'slpp_all/surelog.uhdm', self.toplevel+'.uhdm']
 
-
-        self.render_template('surelog-makefile.j2',
-                             'surelog.mk',
-                             template_vars)
+        commands.add([command_1,command_2], [targets], [depends])
