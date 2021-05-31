@@ -9,7 +9,7 @@ import re
 import subprocess
 
 from edalize.edatool import Edatool
-from edalize.yosys import Yosys
+from edalize.surelog import Surelog
 from importlib import import_module
 
 logger = logging.getLogger(__name__)
@@ -71,14 +71,26 @@ class Symbiflow(Edatool):
                         "type": "String",
                         "desc": "Additional options for Nextpnr tool. If not used, default options for the tool will be used",
                     },
+                    {
+                        "name" : "yosys_frontend",
+                        "type" : "String",
+                        "desc" : 'Select yosys frontend. Currently "uhdm" and "verilog" frontends are supported.'
+                    },
+                ],
+                'lists' : [
+                        {'name' : 'frontend_options',
+                         'type' : 'String',
+                         'desc' : 'List of options for yosys frontend'},
                 ],
             }
 
             symbiflow_members = symbiflow_help["members"]
+            symbiflow_lists = symbiflow_help["lists"]
 
             return {
                 "description": "The Symbiflow backend executes Yosys sythesis tool and VPR/Nextpnr place and route. It can target multiple different FPGA vendors",
                 "members": symbiflow_members,
+                "lists": symbiflow_lists,
             }
 
     def get_version(self):
@@ -233,9 +245,12 @@ endif
         if has_vhdl or has_vhdl2008:
             logger.error("VHDL files are not supported in Yosys")
         file_list = []
+        uhdm_list = []
         timing_constraints = []
         pins_constraints = []
         placement_constraints = []
+
+        yosys_frontend = self.tool_options.get('yosys_frontend', "verilog")
 
         for f in src_files:
             if f.file_type in ["verilogSource"]:

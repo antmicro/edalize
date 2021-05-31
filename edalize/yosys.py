@@ -6,6 +6,8 @@ import logging
 import os.path
 
 from edalize.edatool import Edatool
+from edalize.surelog import Surelog
+from importlib import import_module
 
 logger = logging.getLogger(__name__)
 
@@ -35,9 +37,15 @@ class Yosys(Edatool):
                          'desc' : 'TCL template file to use instead of default template'},
                         ],
                     'lists' : [
+                        {'name' : 'yosys_read_options',
+                         'type' : 'String',
+                         'desc' : 'Addtional options for the read_* command (e.g. read_verlog or read_uhdm)'},
                         {'name' : 'yosys_synth_options',
                          'type' : 'String',
                          'desc' : 'Additional options for the synth command'},
+                        {'name' : 'frontend_options',
+                         'type' : 'String',
+                         'desc' : 'Additional options for the Yosys frontend'},
                         ]}
 
     def configure_main(self):
@@ -86,10 +94,6 @@ class Yosys(Edatool):
                 self.toplevel))
 
         output_format = self.tool_options.get('output_format', 'blif')
-        arch = self.tool_options.get('arch', None)
-
-        if not arch:
-            logger.error("ERROR: arch is not defined.")
 
         makefile_name = self.tool_options.get('makefile_name', self.name + '.mk')
         template = yosys_template or 'edalize_yosys_template.tcl'
@@ -100,7 +104,7 @@ class Yosys(Edatool):
                 'incdirs'             : ' '.join(['-I'+d for d in incdirs]),
                 'top'                 : self.toplevel,
                 'synth_command'       : "synth_" + arch,
-                'synth_options'       : " ".join(self.tool_options.get('yosys_synth_options', '')),
+                'synth_options'       : " ".join(yosys_synth_options),
                 'write_command'       : "write_" + output_format,
                 'default_target'      : output_format,
                 'edif_opts'           : '-pvector bra' if arch=='xilinx' else '',
