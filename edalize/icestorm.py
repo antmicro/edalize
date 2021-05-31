@@ -25,6 +25,13 @@ class Icestorm(Edatool):
                     {'name' : 'arachne_pnr_options',
                      'type' : 'String',
                      'desc' : 'Additional options for Arachnhe PNR'},
+                    {'name' : 'yosys_read_options',
+                     'type' : 'String',
+                     'desc' : 'Addtional options for the read_* command (e.g. read_verlog or read_uhdm)'},
+                    {'name' : 'frontend_options',
+                     'type' : 'String',
+                     'desc' : 'Additional options for the Yosys frontend'},
+
                 ]}
             Edatool._extend_options(options, Yosys)
             Edatool._extend_options(options, Nextpnr)
@@ -36,6 +43,9 @@ class Icestorm(Edatool):
     def configure_main(self):
         # Write yosys script file
         yosys_synth_options = self.tool_options.get('yosys_synth_options', '')
+        yosys_read_options    = self.tool_options.get('yosys_read_options', [])
+        yosys_synth_options   = ["-nomux"] + yosys_synth_options
+        frontend_options      = self.tool_options.get('frontedn_options',[])
 
         #Pass icestorm tool options to yosys and nextpnr
         self.edam['tool_options'] = \
@@ -44,6 +54,8 @@ class Icestorm(Edatool):
                 'yosys_synth_options' : yosys_synth_options,
                 'yosys_as_subtool' : True,
                 'yosys_template' : self.tool_options.get('yosys_template'),
+                'yosys_read_options' : yosys_read_options,
+                'frontend_options' : frontend_options
             },
              'nextpnr' : {
                  'nextpnr_options' : self.tool_options.get('nextpnr_options', [])
