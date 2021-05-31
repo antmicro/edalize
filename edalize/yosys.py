@@ -40,6 +40,9 @@ class Yosys(Edatool):
                         {'name' : 'yosys_read_options',
                          'type' : 'String',
                          'desc' : 'Addtional options for the read_* command (e.g. read_verlog or read_uhdm)'},
+                        {'name' : 'yosys_vhdl_read_options',
+                         'type' : 'String',
+                         'desc' : 'Addtional options for the ghdl command'},
                         {'name' : 'yosys_synth_options',
                          'type' : 'String',
                          'desc' : 'Additional options for the synth command'},
@@ -56,6 +59,7 @@ class Yosys(Edatool):
         yosys_template = self.tool_options.get('yosys_template')
 
         yosys_read_options = " ".join(self.tool_options.get('yosys_read_options', []))
+        yosys_vhdl_read_options = " ".join(self.tool_options.get('yosys_vhdl_read_options', []))
         file_table = []
         yosys_synth_options = self.tool_options.get('yosys_synth_options', [])
 
@@ -128,6 +132,18 @@ class Yosys(Edatool):
 
                 file_table.append(cmd + ' ' + yosys_read_options + ' {' + f.name + '}')
 
+        vhdl_files = ""
+        modules = {}
+        for f in src_files:
+            if f.file_type.startswith('VHDLSource'):
+                vhdl_files += f.name + ' '
+                modules["ghdl"] = True
+            else:
+                continue
+
+        if vhdl_files is not "":
+            file_table.append('ghdl ' + yosys_vhdl_read_options + " " + vhdl_files + '-e')
+
         verilog_defines = []
         for key, value in self.vlogdefine.items():
             verilog_defines.append('{{{key} {value}}}'.format(key=key, value=value))
@@ -160,6 +176,7 @@ class Yosys(Edatool):
                 'use_surelog'         : use_surelog,
                 'use_sv2v'            : use_sv2v,
                 'sv_to_verilog'       : ' '.join(sv_to_verilog),
+                'yosys_modules'       : '-m ' + ' '.join(key for key in modules.keys())
         }
 
         self.render_template('edalize_yosys_procs.tcl.j2',
