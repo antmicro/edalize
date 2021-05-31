@@ -13,6 +13,14 @@ class Sv2v(Edatool):
     def get_doc(cls, api_ver):
         if api_ver == 0:
             return {'description' : "Sv2v",
+                    'members' : [
+                        {'name' : 'sv2v_as_subtool',
+                         'type' : 'bool',
+                         'desc' : 'Determines if sv2v is run as a part of bigger toolchain, or as a standalone tool'},
+                        {'name' : 'makefile_name',
+                         'type' : 'String',
+                         'desc' : 'Generated makefile name, defaults to $name.mk'},
+                        ],
                     'lists' : [
                         {'name' : 'sv2v_options',
                          'type' : 'String',
@@ -20,26 +28,48 @@ class Sv2v(Edatool):
                         ]}
 
     def configure_main(self):
-        (src_files, incdirs) = self._get_fileset_files()
-        systemverilog_file_list = []
-        for f in src_files:
-            if f.file_type.startswith('systemVerilogSource'):
-                systemverilog_file_list.append(f.name)
+        incdirs = []
+        file_table = []
+        unused_files = []
+
+        for f in self.files:
+            src = ""
+            if f['file_type'].startswith('systemVerilogSource'):
+                src = f['name']
+
+            if src:
+                if not self._add_include_dir(f, incdirs):
+                    file_table.append(src)
+            else:
+                unused_files.append(f)
+
+        self.edam['files'] = unused_files
+        of = [
+            {'name' : name+'.v', 'file_type' : 'verilogSource'} for name in file_table,
+        ]
+        self.edam['files'] += of
 
         pattern = len(self.vlogdefine.keys()) * "-D%s=%%s "
         verilog_defines_command = pattern % tuple(self.vlogdefine.keys()) % tuple(self.vlogdefine.values())
 
         sv2v_options = self.tool_options.get('sv2v_options', [])
 
-        template_vars = {
-                'name'                      : self.name,
-                'sv_sources'                : ' '.join(systemverilog_file_list),
-                'incdirs'                   : ' '.join(['--incdir='+d for d in incdirs]),
-                'sv2v_options'              : ' '.join(sv2v_options) + " " + verilog_defines_command,
-        }
+        sv2v_options = ' '.join(sv2v_options) + " " + verilog_defines_command
+        incdirs = ' '.join(['--incdir='+d for d in incdirs])
+        sv_sources = ' '.join(file_table)
 
+        commands = self.EdaCommands()
+        commands.set_default_target(self.name)
+        depends = []
+        targets = [self.name]
+        command = ['sv2s' , sv2v_options, incdirs, sv_sources]
+        commands.add(command, [depends], [targets])
 
-        self.render_template('sv2v-makefile.j2',
-                             'sv2v.mk',
-                             template_vars)
+        makefile_name = self.tool_options.get('makefile_name', self.name + '.mk')
 
+        if self.tool_options.get('sv2v_as_subtool'):
+            self.commands = commands.commands
+
+            commands.write(os.path.join(self.work_root, makefile_name))
+        else:
+            commands.write(os.path.join(self.work_root, 'Makefile'))
