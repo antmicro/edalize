@@ -28,6 +28,9 @@ class Icestorm(Edatool):
                     {'name' : 'yosys_read_options',
                      'type' : 'String',
                      'desc' : 'Addtional options for the read_* command (e.g. read_verlog or read_uhdm)'},
+                    {'name' : 'yosys_synth_options',
+                     'type' : 'String',
+                     'desc' : 'Additional options for the synth_ice40 command'},
                     {'name' : 'frontend_options',
                      'type' : 'String',
                      'desc' : 'Additional options for the Yosys frontend'},
@@ -42,7 +45,7 @@ class Icestorm(Edatool):
 
     def configure_main(self):
         # Write yosys script file
-        yosys_synth_options = self.tool_options.get('yosys_synth_options', '')
+        yosys_synth_options   = self.tool_options.get('yosys_synth_options', '')
         yosys_read_options    = self.tool_options.get('yosys_read_options', [])
         yosys_synth_options   = ["-nomux"] + yosys_synth_options
         frontend_options      = self.tool_options.get('frontedn_options',[])

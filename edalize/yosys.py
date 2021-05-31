@@ -52,6 +52,7 @@ class Yosys(Edatool):
         # write Yosys tcl script file
 
         yosys_template = self.tool_options.get('yosys_template')
+        yosys_read_options = " ".join(self.tool_options.get('yosys_read_options', []))
 
         yosys_read_options = " ".join(self.tool_options.get('yosys_read_options', []))
         file_table = []
@@ -149,7 +150,7 @@ class Yosys(Edatool):
                 'incdirs'             : ' '.join(['-I'+d for d in incdirs]),
                 'top'                 : self.toplevel,
                 'synth_command'       : "synth_" + arch,
-                'synth_options'       : " ".join(yosys_synth_options),
+                'synth_options'       : " ".join(self.tool_options.get('yosys_synth_options', '')),
                 'write_command'       : "write_" + output_format,
                 'default_target'      : output_format,
                 'edif_opts'           : '-pvector bra' if arch=='xilinx' else '',
