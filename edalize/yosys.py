@@ -55,6 +55,10 @@ class Yosys(Edatool):
         yosys_template = self.tool_options.get('yosys_template')
         yosys_read_options = " ".join(self.tool_options.get('yosys_read_options', []))
 
+        arch = self.tool_options.get('arch', None)
+        if not arch:
+            logger.error("ERROR: arch is not defined.")
+
         self.edam['tool_options'] = \
             {'surelog' : {
                 'arch' : arch,
@@ -129,9 +133,6 @@ class Yosys(Edatool):
                 self._param_value_str(value),
                 self.toplevel))
 
-        arch = self.tool_options.get('arch', None)
-        if not arch:
-            logger.error("ERROR: arch is not defined.")
 
         output_format = self.tool_options.get('output_format', 'blif')
 
