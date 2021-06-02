@@ -87,6 +87,7 @@ class Yosys(Edatool):
         incdirs = []
         file_table = []
         unused_files = []
+        sv_files = []
 
         for f in self.files:
             cmd = ""
@@ -94,6 +95,7 @@ class Yosys(Edatool):
                 cmd = 'read_verilog '
             elif f['file_type'].startswith('systemVerilogSource'):
                 cmd = 'read_verilog -sv '
+                sv_files += [os.path.splitext(f['name'])[0] + ".v"]
             elif f['file_type'] == 'tclSource':
                 cmd = 'source '
             elif f['file_type'] == 'uhdm':
@@ -161,18 +163,23 @@ class Yosys(Edatool):
                                  template_vars)
 
         commands = self.EdaCommands()
+        additional_deps = []
         if use_surelog:
             target = self.toplevel + '.uhdm'
             depends = ''
             command = ['make', '-f', 'surelog.mk']
+            commands.add([command], [target], [depends])
+            additional_deps = target
         elif use_sv2v:
-            target = [] #TODO put here the verilog files
+            targets = sv_files
             depends = ''
             command = ['make', '-f', 'sv2v.mk']
+            commands.add([command], [targets], [depends])
+            additional_deps = targets
 
         commands.add(['yosys', '-l', 'yosys.log', '-p', f'"tcl {template}"'],
                          [f'{self.name}.{output}' for output in ['blif', 'json','edif']],
-                         [template])
+                         [template] + additional_deps)
         if self.tool_options.get('yosys_as_subtool'):
             self.commands = commands.commands
         else:
