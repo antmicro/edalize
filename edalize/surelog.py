@@ -91,7 +91,7 @@ class Surelog(Edatool):
         commands.set_default_target(self.toplevel+'.uhdm')
         
         if self.tool_options.get('surelog_as_subtool'):
-            self.commands = commands.commands
+            self.commands = commands.commands #What this line actually do?
 
             commands.write(os.path.join(self.work_root, makefile_name))
         else:

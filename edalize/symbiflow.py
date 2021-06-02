@@ -103,22 +103,16 @@ class Symbiflow(Edatool):
         # Yosys configuration
         yosys_synth_options = self.tool_options.get("yosys_synth_options", "")
         yosys_template = self.tool_options.get("yosys_template")
-        yosys_edam = {
-                "files"         : self.files,
-                "name"          : self.name,
-                "toplevel"      : self.toplevel,
-                "parameters"    : self.parameters,
-                "tool_options"  : {
-                                    "yosys" : {
-                                        "arch" : vendor,
-                                        "yosys_synth_options" : yosys_synth_options,
-                                        "yosys_template" : yosys_template,
-                                        "yosys_as_subtool" : True,
-                                    }
-                                }
-                }
+        self.edam['tool_options'] = \
+            {"yosys" : {
+                "arch" : vendor,
+                "yosys_synth_options" : yosys_synth_options,
+                "yosys_template" : yosys_template,
+                "yosys_as_subtool" : True,
+            },
+            }
 
-        yosys = getattr(import_module("edalize.yosys"), "Yosys")(yosys_edam, self.work_root)
+        yosys = Yosys(self.edam, self.work_root)
         yosys.configure()
 
         # Nextpnr configuration
@@ -249,11 +243,21 @@ endif
         timing_constraints = []
         pins_constraints = []
         placement_constraints = []
+        user_files = []
+
+        arch = self.tool_options.get("arch")
+        if not arch:
+            logger.error("ERROR: arch is not defined.")
 
         yosys_frontend = self.tool_options.get('yosys_frontend', "verilog")
+        uhdm_mode = False
+        if yosys_frontend in ["uhdm"]:
+            uhdm_mode = True
 
         for f in src_files:
-            if f.file_type in ["verilogSource"]:
+            if f.file_type in ["user"]:
+                user_files.append(f.name)
+            elif f.file_type in ["systemVerilogSource"]:
                 file_list.append(f.name)
             if f.file_type in ["SDC"]:
                 timing_constraints.append(f.name)
@@ -261,6 +265,18 @@ endif
                 pins_constraints.append(f.name)
             if f.file_type in ["xdc"]:
                 placement_constraints.append(f.name)
+        if uhdm_mode:
+            self.edam['tool_options'] = \
+                {"surelog" : {
+                    'arch' : arch,
+                    'surelog_options' : self.tool_options.get('frontend_options', []),
+                    'surelog_as_subtool' : True,
+                },
+                }
+            surelog = Surelog(self.edam, self.work_root)
+            surelog.configure()
+            self.vlogparam.clear() # vlogparams are handled by Surelog
+            uhdm_list += [os.path.abspath(self.work_root + '/' + self.toplevel + '.uhdm')]
 
         part = self.tool_options.get("part")
         package = self.tool_options.get("package")
@@ -298,20 +314,28 @@ endif
         xdc_opts = ['-x']+placement_constraints if placement_constraints else []
 
         commands = self.EdaCommands()
+        if uhdm_mode:
+            depends = []
+            targets = [self.toplevel + '.uhdm']
+            command = ['make', '-f', 'surelog.mk']
+            commands.add(command, [targets], depends)
         #Synthesis
         targets = self.toplevel+'.eblif'
+        depends = []
+        if uhdm_mode:
+            depends = [self.toplevel + '.uhdm']
         command = ['symbiflow_synth', '-t', self.toplevel]
-        command += ['-v'] + file_list
+        command += [['-v'] + file_list] if uhdm_mode else [self.toplevel + '.uhdm']
         command += ['-d', bitstream_device]
         command += ['-p' if vendor == 'xilinx' else '-P', partname]
         command += xdc_opts
-        commands.add(command, [targets], [])
+        commands.add(command, [targets], depends)
 
         #P&R
         eblif_opt = ['-e', self.toplevel+'.eblif']
         device_opt = ['-d', part+'_'+device_suffix]
 
-        depends = self.toplevel+'.eblif'
+        depends = [self.toplevel+'.eblif']
         targets = self.toplevel+'.net'
         command = ['symbiflow_pack'] + eblif_opt + device_opt + sdc_opts + vpr_options
         commands.add(command, [targets], [depends])
@@ -342,6 +366,7 @@ endif
         command += ['-p' if vendor == 'xilinx' else '-P', partname]
         command += ['-b', targets]
         commands.add(command, [targets], [depends])
+
 
         commands.set_default_target(targets)
         commands.write(os.path.join(self.work_root, 'Makefile'))
