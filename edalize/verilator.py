@@ -105,8 +105,6 @@ class Verilator(Edatool):
             f.write(''.join(['-G{}={}\n'.format(key, self._param_value_str(value, str_quote_style='\\"')) for key, value in self.vlogparam.items()]))
             f.write(''.join(['-D{}={}\n'.format(key, self._param_value_str(value)) for key, value in self.vlogdefine.items()]))
 
-        self.render_template('verilator-makefile.j2',
-                             'Makefile')
 
         if 'verilator_options' in self.tool_options:
             verilator_options = ' '.join(self.tool_options['verilator_options'])
@@ -126,6 +124,31 @@ class Verilator(Edatool):
                                 'verilator_options' : verilator_options,
                                 'make_options'      : make_options
                              })
+        commands = self.EdaCommands()
+        commands.add(['include', 'config.mk'], [], [])
+        veril_root = os.getenv("VERILATOR_ROOT")
+        verilator_bin = ''
+        if veril_root:
+            verilator_bin = veril_root + '/bin/verilator'
+        else:
+            verilator_bin = 'verilator'
+        target = ['V'+self.toplevel]
+        depends = ['V'+self.toplevel+'.mk']
+        command = ['make', make_options, '-f', '$<']
+        commands.add([command], [target], [depends])
+
+        target= ['V'+self.toplevel+'.mk']
+        depends= []
+        command = [verilator_bin, '-f', self.verilator_file, verilator_options]
+        commands.add([command], [target], [depends])
+
+        makefile_name = self.tool_options.get('makefile_name', self.name + '.mk')
+        if self.tool_options.get('verilator_as_subtool'):
+            self.commands = commands.commands
+
+            commands.write(os.path.join(self.work_root, makefile_name))
+        else:
+            commands.write(os.path.join(self.work_root, 'Makefile'))
 
     def build_main(self):
         logger.info("Building simulation model")
