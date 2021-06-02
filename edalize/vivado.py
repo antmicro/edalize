@@ -112,24 +112,18 @@ class Vivado(Edatool):
 
             yosys_synth_options = self.tool_options.get('yosys_synth_options', [])
             yosys_read_options = self.tool_options.get('yosys_read_options', [])
-            yosys_edam = {
-                    'files'         : self.files,
-                    'name'          : self.name,
-                    'toplevel'      : self.toplevel,
-                    'parameters'    : self.parameters,
-                    'tool_options'  : {'yosys' : {
-                                            'arch' : 'xilinx',
-                                            'output_format' : 'edif',
-                                            'yosys_synth_options' : yosys_synth_options,
-                                            'yosys_read_options' : yosys_read_options,
-                                            'yosys_as_subtool' : True,
-                                            'script_name'   : 'yosys.tcl',
-                                            'frontend_options' : self.tool_options.get('frontend_options', []),
-                                            }
-                                    }
+            self.edam['tool_options'] = \
+                {'yosys' : {
+                    'arch' : 'xilinx',
+                    'output_format' : 'edif',
+                    'yosys_synth_options' : yosys_synth_options,
+                    'yosys_read_options' : yosys_read_options,
+                    'yosys_as_subtool' : True,
+                    'script_name'   : 'yosys.tcl',
+                    'frontend_options' : self.tool_options.get('frontend_options', []),
                     }
-
-            yosys = getattr(import_module("edalize.yosys"), 'Yosys')(yosys_edam, self.work_root)
+                }
+            yosys = Yosys(self.edam, self.work_root)
             yosys.configure()
 
 
