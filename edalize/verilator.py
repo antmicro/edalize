@@ -126,6 +126,8 @@ class Verilator(Edatool):
                              })
         commands = self.EdaCommands()
         commands.add(['include', 'config.mk'], [], [])
+        # Not sure about this one,
+        # can verilator_root be set after running this script?
         veril_root = os.getenv("VERILATOR_ROOT")
         verilator_bin = ''
         if veril_root:
