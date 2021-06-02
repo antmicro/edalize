@@ -15,22 +15,16 @@ class Trellis(Edatool):
     @classmethod
     def get_doc(cls, api_ver):
         if api_ver == 0:
-            yosys_help = Yosys.get_doc(api_ver)
-            trellis_help = {
-                    'lists' : [
-                        {'name' : 'nextpnr_options',
-                         'type' : 'String',
-                         'desc' : 'Additional options for nextpnr'},
-                        {'name' : 'yosys_synth_options',
-                         'type' : 'String',
-                         'desc' : 'Additional options for the synth_ecp5 command'},
+            options = {
+                'lists' : [
                         {'name' : 'yosys_read_options',
                          'type' : 'String',
                          'desc' : 'Addtional options for the read_* command (e.g. read_verlog or read_uhdm)'},
                         {'name' : 'frontend_options',
                          'type' : 'String',
                          'desc' : 'Additional options for the Yosys frontend'},
-                        ]}
+                    ],
+                'members' : []}
 
             Edatool._extend_options(options, Yosys)
             Edatool._extend_options(options, Nextpnr)
@@ -40,26 +34,32 @@ class Trellis(Edatool):
                     'lists'   : options['lists']}
 
     def configure_main(self):
-        # Write yosys script file
-        (src_files, incdirs)  = self._get_fileset_files()
         yosys_synth_options   = self.tool_options.get('yosys_synth_options', [])
         yosys_read_options    = self.tool_options.get('yosys_read_options', [])
         yosys_synth_options   = ["-nomux"] + yosys_synth_options
         frontend_options      = self.tool_options.get('frontend_options', [])
-        yosys_edam = {
-                'files'         : self.files,
-                'name'          : self.name,
-                'toplevel'      : self.toplevel,
-                'parameters'    : self.parameters,
-                'tool_options'  : {'yosys' : {
-                                        'arch' : 'ecp5',
-                                        'yosys_synth_options' : yosys_synth_options,
-                                        'yosys_read_options' : yosys_read_options,
-                                        'yosys_as_subtool' : True,
-                                        'frontend_options' : frontend_options,
-                                        }
-                                }
-                }
+
+        #Pass trellis tool options to yosys and nextpnr
+        self.edam['tool_options'] = \
+            {'yosys' : {
+                'arch' : 'ecp5',
+                'yosys_synth_options' : yosys_synth_options,
+                'yosys_read_options' : yosys_read_options,
+                'yosys_as_subtool' : True,
+                'yosys_template' : self.tool_options.get('yosys_template'),
+                'frontend_options' : frontend_options,
+            },
+             'nextpnr' : {
+                 'nextpnr_options' : self.tool_options.get('nextpnr_options', [])
+             },
+             }
+
+        yosys = Yosys(self.edam, self.work_root)
+        yosys.configure()
+
+        nextpnr = Nextpnr(yosys.edam, self.work_root)
+        nextpnr.flow_config = {'arch' : 'ecp5'}
+        nextpnr.configure()
 
         # Write Makefile
         commands = self.EdaCommands()
