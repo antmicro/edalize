@@ -58,6 +58,9 @@ class Vivado(Edatool):
                         {'name' : 'hw_target',
                         'type' : 'Description',
                         'desc' : 'Board identifier (e.g. */xilinx_tcf/Digilent/123456789123A'},
+                        {'name' : 'library_files',
+                         'type' : 'String',
+                         'desc' : 'List of the library files for Surelog'},
                     ],
                     'lists' : [
                         {'name' : 'yosys_synth_options',
@@ -66,7 +69,7 @@ class Vivado(Edatool):
                         {'name' : 'yosys_read_options',
                          'type' : 'String',
                          'desc' : 'Additional options for the Yosys\' read command'},
-                        {'name' : 'frontend_options',
+                        {'name' : 'surelog_options',
                          'type' : 'String',
                          'desc' : 'Additional options for the Yosys frontend'},
                     ]}
@@ -120,7 +123,8 @@ class Vivado(Edatool):
                     'yosys_read_options' : yosys_read_options,
                     'yosys_as_subtool' : True,
                     'script_name'   : 'yosys.tcl',
-                    'frontend_options' : self.tool_options.get('frontend_options', []),
+                    'surelog_options' : self.tool_options.get('surelog_options', []),
+                    'library_files' : self.tool_options.get('library_files', []),
                     }
                 }
             yosys = Yosys(self.edam, self.work_root)

@@ -34,7 +34,7 @@ class Sv2v(Edatool):
 
         for f in self.files:
             src = ""
-            if f['file_type'].startswith('systemVerilogSource'):
+            if f.get('file_type','').startswith('systemVerilogSource'):
                 src = f['name']
 
             if src:
@@ -45,7 +45,7 @@ class Sv2v(Edatool):
 
         self.edam['files'] = unused_files
         of = [
-            {'name' : name+'.v', 'file_type' : 'verilogSource'} for name in file_table,
+            {'name' : name+'.v', 'file_type' : 'verilogSource'} for name in file_table
         ]
         self.edam['files'] += of
 
@@ -65,11 +65,9 @@ class Sv2v(Edatool):
         command = ['sv2s' , sv2v_options, incdirs, sv_sources]
         commands.add(command, [depends], [targets])
 
-        makefile_name = self.tool_options.get('makefile_name', self.name + '.mk')
-
         if self.tool_options.get('sv2v_as_subtool'):
             self.commands = commands.commands
 
-            commands.write(os.path.join(self.work_root, makefile_name))
+            commands.write(os.path.join(self.work_root, "sv2v.mk"))
         else:
             commands.write(os.path.join(self.work_root, 'Makefile'))

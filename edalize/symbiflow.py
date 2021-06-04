@@ -76,9 +76,14 @@ class Symbiflow(Edatool):
                         "type" : "String",
                         "desc" : 'Select yosys frontend. Currently "uhdm" and "verilog" frontends are supported.'
                     },
+                    {
+                        "name" : "library_files",
+                        "type" : "String",
+                        "desc" : "list of the library files for surelog"
+                    }
                 ],
                 'lists' : [
-                        {'name' : 'frontend_options',
+                        {'name' : 'surelog_options',
                          'type' : 'String',
                          'desc' : 'List of options for yosys frontend'},
                 ],
@@ -100,6 +105,11 @@ class Symbiflow(Edatool):
         (src_files, incdirs) = self._get_fileset_files(force_slash=True)
         vendor = self.tool_options.get("vendor")
 
+        # Nextpnr configuration
+        arch = self.tool_options.get("arch")
+        if arch not in self.archs:
+            logger.error('Missing or invalid "arch" parameter: {} in "tool_options"'.format(arch))
+
         # Yosys configuration
         yosys_synth_options = self.tool_options.get("yosys_synth_options", "")
         yosys_template = self.tool_options.get("yosys_template")
@@ -109,16 +119,19 @@ class Symbiflow(Edatool):
                 "yosys_synth_options" : yosys_synth_options,
                 "yosys_template" : yosys_template,
                 "yosys_as_subtool" : True,
+                'surelog_options' : self.tool_options.get('surelog_options', []),
+            },
+             "surelog" : {
+                'library_files' : self.tool_options.get('library_files', []),
+                'arch' : arch,
+                'surelog_options' : self.tool_options.get('surelog_options', []),
+                'surelog_as_subtool' : True,
             },
             }
 
         yosys = Yosys(self.edam, self.work_root)
         yosys.configure()
 
-        # Nextpnr configuration
-        arch = self.tool_options.get("arch")
-        if arch not in self.archs:
-            logger.error('Missing or invalid "arch" parameter: {} in "tool_options"'.format(arch))
 
         package = self.tool_options.get("package")
         if not package:
@@ -141,7 +154,7 @@ class Symbiflow(Edatool):
         device = None
         placement_constraints = []
 
-        for f in src_files:
+        for f in self.edam['files']:
             if f.file_type in ["bba"]:
                 chipdb = f.name
             elif f.file_type in ["device"]:
@@ -269,7 +282,7 @@ endif
             self.edam['tool_options'] = \
                 {"surelog" : {
                     'arch' : arch,
-                    'surelog_options' : self.tool_options.get('frontend_options', []),
+                    'surelog_options' : self.tool_options.get('surelog_options', []),
                     'surelog_as_subtool' : True,
                 },
                 }
