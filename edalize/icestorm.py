@@ -31,7 +31,7 @@ class Icestorm(Edatool):
                     {'name' : 'yosys_synth_options',
                      'type' : 'String',
                      'desc' : 'Additional options for the synth_ice40 command'},
-                    {'name' : 'frontend_options',
+                    {'name' : 'surelog_options',
                      'type' : 'String',
                      'desc' : 'Additional options for the Yosys frontend'},
 
@@ -48,7 +48,7 @@ class Icestorm(Edatool):
         yosys_synth_options   = self.tool_options.get('yosys_synth_options', '')
         yosys_read_options    = self.tool_options.get('yosys_read_options', [])
         yosys_synth_options   = ["-nomux"] + yosys_synth_options
-        frontend_options      = self.tool_options.get('frontedn_options',[])
+        surelog_options      = self.tool_options.get('surelog_options',[])
 
         #Pass icestorm tool options to yosys and nextpnr
         self.edam['tool_options'] = \
@@ -58,7 +58,7 @@ class Icestorm(Edatool):
                 'yosys_as_subtool' : True,
                 'yosys_template' : self.tool_options.get('yosys_template'),
                 'yosys_read_options' : yosys_read_options,
-                'frontend_options' : frontend_options
+                'surelog_options' : surelog_options
             },
              'nextpnr' : {
                  'nextpnr_options' : self.tool_options.get('nextpnr_options', [])

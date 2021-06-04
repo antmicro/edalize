@@ -36,6 +36,9 @@ class Yosys(Edatool):
                         {'name' : 'yosys_template',
                          'type' : 'String',
                          'desc' : 'TCL template file to use instead of default template'},
+                        {'name' : 'library_files',
+                         'type' : 'String',
+                         'desc' : 'List of the library files for Surelog'},
                         ],
                     'lists' : [
                         {'name' : 'yosys_read_options',
@@ -44,7 +47,7 @@ class Yosys(Edatool):
                         {'name' : 'yosys_synth_options',
                          'type' : 'String',
                          'desc' : 'Additional options for the synth command'},
-                        {'name' : 'frontend_options',
+                        {'name' : 'surelog_options',
                          'type' : 'String',
                          'desc' : 'Additional options for the Yosys frontend'},
                         ]}
@@ -62,22 +65,25 @@ class Yosys(Edatool):
         self.edam['tool_options'] = \
             {'surelog' : {
                 'arch' : arch,
-                'surelog_options' : self.tool_options.get('frontend_options', []),
+                'surelog_options' : self.tool_options.get('surelog_options', []),
+                'library_files' : self.tool_options.get('library_files', []),
                 'surelog_as_subtool' : True,
             },
              'sv2v' : {
-                'sv2v_options' : self.tool_options.get('frontend_options', []),
+                'sv2v_options' : self.tool_options.get('surelog_options', []),
                 'sv2v_as_subtool' : True,
             },
             }
-
+        yosys_synth_options = self.tool_options.get('yosys_synth_options', [])
         use_surelog = False
         use_sv2v = False
 
         if "frontend=surelog" in yosys_synth_options:
             use_surelog = True
+            yosys_synth_options.remove("frontend=surelog")
         elif "frontend=sv2v" in yosys_synth_options:
             use_sv2v = True
+            yosys_synth_options.remove("frontend=sv2v")
 
         if use_surelog:
             surelog = Surelog(self.edam, self.work_root)
@@ -92,18 +98,17 @@ class Yosys(Edatool):
         file_table = []
         unused_files = []
         sv_files = []
-
-        for f in self.files:
+        for f in self.edam['files']:
             cmd = ""
-            if f['file_type'].startswith('verilogSource'):
+            if f.get('file_type','').startswith('verilogSource'):
                 cmd = 'read_verilog '
-            elif f['file_type'].startswith('systemVerilogSource'):
+            elif f.get('file_type','').startswith('systemVerilogSource'):
                 cmd = 'read_verilog -sv '
                 sv_files += [os.path.splitext(f['name'])[0] + ".v"]
-            elif f['file_type'] == 'tclSource':
+            elif f.get('file_type','') == 'tclSource':
                 cmd = 'source '
-            elif f['file_type'] == 'uhdm':
-                cmd = 'read_uhdm'
+            elif f.get('file_type','') == 'uhdm':
+                cmd = 'read_uhdm '
 
             if cmd:
                 if not self._add_include_dir(f, incdirs):
@@ -168,19 +173,19 @@ class Yosys(Edatool):
         if use_surelog:
             target = self.toplevel + '.uhdm'
             depends = ''
-            command = ['make', '-f', 'surelog.mk']
-            commands.add([command], [target], [depends])
+            command = ['make', '-f', "surelog.mk"]
+            commands.add(command, [target], [depends])
             additional_deps = target
         elif use_sv2v:
             targets = sv_files
             depends = ''
-            command = ['make', '-f', 'sv2v.mk']
-            commands.add([command], [targets], [depends])
+            command = ['make', '-f', "sv2v.mk"]
+            commands.add(command, [targets], [depends])
             additional_deps = targets
 
         commands.add(['yosys', '-l', 'yosys.log', '-p', f'"tcl {template}"'],
                          [f'{self.name}.{output}' for output in ['blif', 'json','edif']],
-                         [template] + additional_deps)
+                         [template, additional_deps])
         if self.tool_options.get('yosys_as_subtool'):
             self.commands = commands.commands
         else:
