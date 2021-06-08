@@ -134,30 +134,30 @@ class Vivado(Edatool):
 
         for f in self.files:
             cmd = ""
-            if f['file_type'].startswith('verilogSource'):
+            if f.get('file_type', '').startswith('verilogSource'):
                 cmd = 'read_verilog'
-            elif f['file_type'].startswith('systemVerilogSource'):
+            elif f.get('file_type', '').startswith('systemVerilogSource'):
                 cmd = 'read_verilog -sv'
-            elif f['file_type'] == 'tclSource':
+            elif f.get('file_type') == 'tclSource':
                 cmd = 'source'
-            elif f['file_type'] == 'edif':
+            elif f.get('file_type') == 'edif':
                 cmd = 'read_edif'
                 edif_files.append(f['name'])
-            elif f['file_type'].startswith('vhdlSource'):
+            elif f.get('file_type', '').startswith('vhdlSource'):
                 cmd = 'read_vhdl'
-                if f['file_type'] == 'vhdlSource-2008':
+                if f.get('file_type') == 'vhdlSource-2008':
                     has_vhdl2008 = True
                     cmd += ' -vhdl2008'
                 if f.get('logical_name'):
                     cmd += ' -library '+f['logical_name']
-            elif f['file_type'] == 'xci':
+            elif f.get('file_type') == 'xci':
                 cmd = 'read_ip'
                 has_xci = True
-            elif f['file_type'] == 'xdc':
+            elif f.get('file_type') == 'xdc':
                 cmd = 'read_xdc'
-            elif f['file_type'] == 'SDC':
+            elif f.get('file_type') == 'SDC':
                 cmd = 'read_xdc -unmanaged'
-            elif f['file_type'] == 'mem':
+            elif f.get('file_type') == 'mem':
                 cmd = 'read_mem'
 
             if cmd:

@@ -40,9 +40,9 @@ class Surelog(Edatool):
         unused_files = []
         for f in self.files:
             src = ""
-            if f.get('file_type', "").startswith('verilogSource'):
+            if f.get('file_type', '').startswith('verilogSource'):
                 src = f['name']
-            elif f.get('file_type', "").startswith('systemVerilogSource'):
+            elif f.get('file_type', '').startswith('systemVerilogSource'):
                 src = '-sv ' + f['name']
 
             if src != "":

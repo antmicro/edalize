@@ -34,7 +34,7 @@ class Sv2v(Edatool):
 
         for f in self.files:
             src = ""
-            if f.get('file_type','').startswith('systemVerilogSource'):
+            if f.get('file_type', '').startswith('systemVerilogSource'):
                 src = f['name']
 
             if src:
