@@ -213,7 +213,7 @@ class Vivado(Edatool):
         commands.add(vivado_command+tcl_file, [project_file], tcl_file + edif_files)
 
         #Synthesis target
-        if synth_tool == 'yosys':
+        if self.synth_tool == 'yosys':
             commands.commands += yosys.commands
             commands.add([], ['synth'], edif_files)
         else:
