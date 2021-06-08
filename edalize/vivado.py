@@ -98,8 +98,6 @@ class Vivado(Edatool):
     def configure_main(self):
         (src_files, incdirs) = self._get_fileset_files(force_slash=True)
 
-        self.jinja_env.filters["src_file_filter"] = self.src_file_filter
-
         has_vhdl = "vhdlSource" in [x.file_type for x in src_files]
         has_vhdl2008 = "vhdlSource-2008" in [x.file_type for x in src_files]
         has_xci = "xci" in [x.file_type for x in src_files]

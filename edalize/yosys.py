@@ -157,7 +157,6 @@ class Yosys(Edatool):
                 'name'                : self.name,
                 'use_surelog'         : use_surelog,
                 'use_sv2v'            : use_sv2v,
-                'sv_to_verilog'       : ' '.join(sv_to_verilog),
         }
         self.render_template('edalize_yosys_procs.tcl.j2',
                              'edalize_yosys_procs.tcl',
