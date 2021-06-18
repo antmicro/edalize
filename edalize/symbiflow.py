@@ -67,6 +67,7 @@ class Symbiflow(Edatool):
                         "desc": "Additional options for VPR tool. If not used, default options for the tool will be used",
                     },
                 ],
+                'lists' : []
             }
             Edatool._extend_options(options, Yosys)
 
