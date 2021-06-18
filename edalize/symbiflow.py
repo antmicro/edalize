@@ -229,7 +229,6 @@ endif
         if has_vhdl or has_vhdl2008:
             logger.error("VHDL files are not supported in Yosys")
         file_list = []
-        uhdm_list = []
         timing_constraints = []
         pins_constraints = []
         placement_constraints = []
@@ -257,20 +256,19 @@ endif
             if f.file_type in ["xdc"]:
                 placement_constraints.append(f.name)
         if uhdm_mode:
-            self.edam['tool_options'] = \
-                {"surelog" : {
+            self.edam['tool_options'] = {"surelog" : {
                     'arch' : vendor,
                     'surelog_options' : self.tool_options.get('surelog_options', []),
                     'surelog_as_subtool' : True,
                 },
-                }
+            }
             surelog = Surelog(self.edam, self.work_root)
             surelog.configure()
             self.vlogparam.clear() # vlogparams are handled by Surelog
-            uhdm_list += [os.path.abspath(self.work_root + '/' + self.toplevel + '.uhdm')]
 
         part = self.tool_options.get("part")
         package = self.tool_options.get("package")
+        vendor = self.tool_options.get("vendor")
 
         if not part:
             logger.error('Missing required "part" parameter')
@@ -307,13 +305,10 @@ endif
         #Synthesis
         depends = []
         if uhdm_mode:
-            depends = [self.toplevel + '.uhdm']
-            targets = [self.toplevel + '.uhdm']
-            command = ['make', '-f', 'surelog.mk']
-            commands.add(command, [targets], depends)
+            commands = surelog.commands
         targets = self.toplevel+'.eblif'
         command = ['symbiflow_synth', '-t', self.toplevel]
-        command += [['-v'] + file_list] if uhdm_mode else [self.toplevel + '.uhdm']
+        command += [['-v'] + file_list] if not uhdm_mode else [self.toplevel + '.uhdm']
         command += ['-d', bitstream_device]
         command += ['-p' if vendor == 'xilinx' else '-P', partname]
         command += xdc_opts
@@ -354,7 +349,6 @@ endif
         command += ['-p' if vendor == 'xilinx' else '-P', partname]
         command += ['-b', targets]
         commands.add(command, [targets], [depends])
-
 
         commands.set_default_target(targets)
         commands.write(os.path.join(self.work_root, 'Makefile'))
