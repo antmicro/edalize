@@ -79,7 +79,6 @@ class Yosys(Edatool):
                     'surelog_as_subtool' : True,
                     }
                 }
-            use_surelog = True
             yosys_synth_options.remove("frontend=surelog")
             surelog = Surelog(self.edam, self.work_root)
             surelog.configure()
@@ -87,13 +86,13 @@ class Yosys(Edatool):
             self.vlogdefine.clear() # vlogdefines are handled by Surelog
             commands.commands += surelog.commands
             additional_deps = self.toplevel + '.uhdm'
+            self.edam['files'] = surelog.edam['files']
         elif "frontend=sv2v" in yosys_synth_options:
             self.edam['tool_options'] = {'sv2v' : {
                         'sv2v_options' : self.tool_options.get('sv2v_options', []),
                         'sv2v_as_subtool' : True
                         }
                     }
-            use_sv2v = True
             yosys_synth_options.remove("frontend=sv2v")
             sv2v = Sv2v(self.edam, self.work_root)
             sv2v.configure()
@@ -105,20 +104,23 @@ class Yosys(Edatool):
         unused_files = []
         for f in self.edam['files']:
             cmd = ""
-            if f.get('file_type','').startswith('verilogSource'):
-                cmd = 'read_verilog '
-            elif f.get('file_type','').startswith('systemVerilogSource'):
-                cmd = 'read_verilog -sv '
-            elif f.get('file_type','') == 'tclSource':
-                cmd = 'source '
-            elif f.get('file_type','') == 'uhdm':
-                cmd = 'read_uhdm '
+            if "file_type" in f:
+                if f.get('file_type','').startswith('verilogSource'):
+                    cmd = 'read_verilog '
+                elif f.get('file_type','').startswith('systemVerilogSource'):
+                    cmd = 'read_verilog -sv '
+                elif f.get('file_type','') == 'tclSource':
+                    cmd = 'source '
+                elif f.get('file_type','') == 'uhdm':
+                    cmd = 'read_uhdm '
 
-            if cmd:
-                if not self._add_include_dir(f, incdirs):
-                    file_table.append(cmd + yosys_read_options + ' {' + f['name'] + '}')
+                if cmd:
+                    if not self._add_include_dir(f, incdirs):
+                        file_table.append(cmd + yosys_read_options + ' {' + f['name'] + '}')
+                else:
+                    unused_files.append(f)
             else:
-                unused_files.append(f)
+                print(f"Skipping file without file_type: {f}")
 
         self.edam['files'] = unused_files
         of = [
@@ -158,8 +160,6 @@ class Yosys(Edatool):
                 'edif_opts'           : '-pvector bra' if arch=='xilinx' else '',
                 'yosys_template'      : template,
                 'name'                : self.name,
-                'use_surelog'         : use_surelog,
-                'use_sv2v'            : use_sv2v,
         }
         self.render_template('edalize_yosys_procs.tcl.j2',
                              'edalize_yosys_procs.tcl',
