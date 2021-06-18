@@ -31,7 +31,7 @@ class Vivado(Edatool):
     @classmethod
     def get_doc(cls, api_ver):
         if api_ver == 0:
-            return {'description' : "The Vivado backend executes Xilinx Vivado to build systems and program the FPGA",
+            options =  {
                     'members' : [
                         {'name' : 'part',
                          'type' : 'String',
@@ -54,7 +54,14 @@ class Vivado(Edatool):
                         {'name' : 'hw_target',
                         'type' : 'Description',
                         'desc' : 'Board identifier (e.g. */xilinx_tcf/Digilent/123456789123A'},
-                    ]}
+                        ],
+                    'lists' : []
+                    }
+            Edatool._extend_options(options, Yosys)
+
+            return {'description' : "The Vivado backend executes Xilinx Vivado to build systems and program the FPGA",
+                    'members' : options['members'],
+                    'lists' : options['lists']}
 
     """ Get tool version
 
@@ -86,11 +93,13 @@ class Vivado(Edatool):
         synth_tool = self.tool_options.get("synth", "vivado")
 
         if synth_tool == "yosys":
-
             self.edam['tool_options']['yosys'] = {
                 'arch' : 'xilinx',
                 'output_format' : 'edif',
                 'yosys_synth_options' : self.tool_options.get('yosys_synth_options', []),
+                'yosys_read_options' : self.tool_options.get('yosys_read_options', []),
+                'surelog_options' : self.tool_options.get('surelog_options', []),
+                'sv2v_options' : self.tool_options.get('sv2v_options', []),
                 'yosys_as_subtool' : True,
             }
 
@@ -121,7 +130,7 @@ class Vivado(Edatool):
                 if f['file_type'] == 'vhdlSource-2008':
                     has_vhdl2008 = True
                     cmd += ' -vhdl2008'
-                if f.get('logical_name'):
+                if f['logical_name']:
                     cmd += ' -library '+f['logical_name']
             elif f['file_type'] == 'xci':
                 cmd = 'read_ip'
