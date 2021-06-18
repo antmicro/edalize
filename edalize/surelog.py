@@ -40,16 +40,19 @@ class Surelog(Edatool):
         unused_files = []
         for f in self.files:
             src = ""
-            if f.get('file_type', '').startswith('verilogSource'):
-                src = f['name']
-            elif f.get('file_type', '').startswith('systemVerilogSource'):
-                src = '-sv ' + f['name']
+            if "file_type" in f: 
+                if f['file_type'].startswith('verilogSource'):
+                    src = f['name']
+                elif f['file_type'].startswith('systemVerilogSource'):
+                    src = '-sv ' + f['name']
 
-            if src != "":
-                if not self._add_include_dir(f, incdirs):
-                    file_table.append(src)
+                if src != "":
+                    if not self._add_include_dir(f, incdirs):
+                        file_table.append(src)
+                else:
+                    unused_files.append(f)
             else:
-                unused_files.append(f)
+                print(f"Got file without file_type, skipping it: {f}")
         
         self.edam['files'] = unused_files
         of = [
@@ -90,7 +93,7 @@ class Surelog(Edatool):
         commands = self.EdaCommands()
         depends = ''
         target = self.toplevel+'_build'
-        command = ['surelog', ' '.join(surelog_options), '-parse', library_command,
+        command = ['surelog', ' '.join(surelog_options), '-parse', ' '.join(library_command),
                 verilog_defines_command, verilog_params_command,
                 include_files_command, ' '.join(file_table)]
         commands.add(command, [target], [depends])
