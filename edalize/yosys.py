@@ -47,9 +47,6 @@ class Yosys(Edatool):
                         {'name' : 'yosys_synth_options',
                          'type' : 'String',
                          'desc' : 'Additional options for the synth command'},
-                        {'name' : 'surelog_options',
-                         'type' : 'String',
-                         'desc' : 'Additional options for the Yosys frontend'},
                         ]
 
                     }
@@ -178,17 +175,11 @@ class Yosys(Edatool):
         commands = self.EdaCommands()
         additional_deps = []
         if use_surelog:
-            target = self.toplevel + '.uhdm'
-            depends = ''
-            command = ['make', '-f', "surelog.mk"]
-            commands.add(command, [target], [depends])
-            additional_deps = target
+            commands.commands += surelog.commands
+            additional_deps = self.toplevel + '.uhdm'
         elif use_sv2v:
-            targets = sv_files
-            depends = ''
-            command = ['make', '-f', "sv2v.mk"]
-            commands.add(command, [targets], [depends])
-            additional_deps = targets
+            commands.commands += sv2v.commands
+            additional_deps = sv_files
 
         commands.add(['yosys', '-l', 'yosys.log', '-p', f'"tcl {template}"'],
                          [f'{self.name}.{output}' for output in ['blif', 'json','edif']],
