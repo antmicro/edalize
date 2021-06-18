@@ -23,6 +23,7 @@ setup(
         'templates/vivado/vivado-project.tcl.j2',
         'templates/vivado/vivado-run.tcl.j2',
         'templates/vivado/vivado-synth.tcl.j2',
+        'templates/verilator/verilator-config.j2',
         'templates/vunit/run.py.j2',
         'templates/quartus/quartus-project.tcl.j2',
         'templates/quartus/quartus-std-makefile.j2',
@@ -35,7 +36,6 @@ setup(
         'templates/ghdl/Makefile.j2',
         'templates/openlane/openlane-makefile.j2',
         'templates/openlane/openlane-script-tcl.j2',
-
     ]},
     author = "Olof Kindgren",
     author_email = "olof.kindgren@gmail.com",
