@@ -7,7 +7,6 @@ import os.path
 from edalize.edatool import Edatool
 from edalize.nextpnr import Nextpnr
 from edalize.yosys import Yosys
-from edalize.surelog import Surelog
 
 class Icestorm(Edatool):
 
@@ -29,7 +28,6 @@ class Icestorm(Edatool):
                 ]}
             Edatool._extend_options(options, Yosys)
             Edatool._extend_options(options, Nextpnr)
-            Edatool._extend_options(options, Surelog)
 
             return {'description' : "Open source toolchain for Lattice iCE40 FPGAs. Uses yosys for synthesis and arachne-pnr or nextpnr for Place & Route",
                     'members' : options['members'],
@@ -37,7 +35,7 @@ class Icestorm(Edatool):
 
     def configure_main(self):
         # Write yosys script file
-        yosys_synth_options   = self.tool_options.get('yosys_synth_options', '')
+        yosys_synth_options = self.tool_options.get('yosys_synth_options', '')
 
         #Pass icestorm tool options to yosys and nextpnr
         self.edam['tool_options'] = \
