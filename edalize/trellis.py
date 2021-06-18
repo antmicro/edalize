@@ -7,6 +7,7 @@ import os.path
 from edalize.edatool import Edatool
 from edalize.nextpnr import Nextpnr
 from edalize.yosys import Yosys
+from edalize.surelog import Surelog
 
 class Trellis(Edatool):
 
@@ -16,38 +17,27 @@ class Trellis(Edatool):
     def get_doc(cls, api_ver):
         if api_ver == 0:
             options = {
-                'lists' : [
-                        {'name' : 'yosys_read_options',
-                         'type' : 'String',
-                         'desc' : 'Addtional options for the read_* command (e.g. read_verlog or read_uhdm)'},
-                        {'name' : 'surelog_options',
-                         'type' : 'String',
-                         'desc' : 'Additional options for the Yosys frontend'},
-                    ],
+                'lists' : [],
                 'members' : []}
 
             Edatool._extend_options(options, Yosys)
             Edatool._extend_options(options, Nextpnr)
+            Edatool._extend_options(options, Surelog)
 
             return {'description' : "Project Trellis enables a fully open-source flow for ECP5 FPGAs using Yosys for Verilog synthesis and nextpnr for place and route",
                     'members' : options['members'],
                     'lists'   : options['lists']}
 
     def configure_main(self):
-        yosys_synth_options   = self.tool_options.get('yosys_synth_options', [])
-        yosys_read_options    = self.tool_options.get('yosys_read_options', [])
-        yosys_synth_options   = ["-nomux"] + yosys_synth_options
-        surelog_options      = self.tool_options.get('surelog_options', [])
-
         #Pass trellis tool options to yosys and nextpnr
         self.edam['tool_options'] = \
             {'yosys' : {
                 'arch' : 'ecp5',
-                'yosys_synth_options' : yosys_synth_options,
-                'yosys_read_options' : yosys_read_options,
+                'yosys_synth_options' : self.tool_options.get('yosys_synth_options', []),
+                'yosys_read_options' : self.tool_options.get('yosys_read_options', []),
                 'yosys_as_subtool' : True,
                 'yosys_template' : self.tool_options.get('yosys_template'),
-                'surelog_options' : surelog_options,
+                'surelog_options' : self.tool_options.get('surelog_options', [])
             },
              'nextpnr' : {
                  'nextpnr_options' : self.tool_options.get('nextpnr_options', [])

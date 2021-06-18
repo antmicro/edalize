@@ -19,7 +19,7 @@ class Yosys(Edatool):
     @classmethod
     def get_doc(cls, api_ver):
         if api_ver == 0:
-            return {'description' : "Open source synthesis tool targeting many different FPGAs",
+            options = {
                     'members' : [
                         {'name' : 'arch',
                          'type' : 'String',
@@ -50,7 +50,15 @@ class Yosys(Edatool):
                         {'name' : 'surelog_options',
                          'type' : 'String',
                          'desc' : 'Additional options for the Yosys frontend'},
-                        ]}
+                        ]
+
+                    }
+            Edatool._extend_options(options, Surelog)
+            Edatool._extend_options(options, Sv2v)
+
+            return {'description' : "Open source synthesis tool targeting many different FPGAs",
+                    'members' : options['members'],
+                    'lists' : options['lists']}
 
     def configure_main(self):
         # write Yosys tcl script file

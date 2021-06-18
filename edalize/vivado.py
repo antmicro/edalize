@@ -31,7 +31,7 @@ class Vivado(Edatool):
     @classmethod
     def get_doc(cls, api_ver):
         if api_ver == 0:
-            return {'description' : "The Vivado backend executes Xilinx Vivado to build systems and program the FPGA",
+            options =  {
                     'members' : [
                         {'name' : 'part',
                          'type' : 'String',
@@ -54,21 +54,14 @@ class Vivado(Edatool):
                         {'name' : 'hw_target',
                         'type' : 'Description',
                         'desc' : 'Board identifier (e.g. */xilinx_tcf/Digilent/123456789123A'},
-                        {'name' : 'library_files',
-                         'type' : 'String',
-                         'desc' : 'List of the library files for Surelog'},
-                    ],
-                    'lists' : [
-                        {'name' : 'yosys_synth_options',
-                         'type' : 'String',
-                         'desc' : 'Additional options for the synth command'},
-                        {'name' : 'yosys_read_options',
-                         'type' : 'String',
-                         'desc' : 'Additional options for the Yosys\' read command'},
-                        {'name' : 'surelog_options',
-                         'type' : 'String',
-                         'desc' : 'Additional options for the Yosys frontend'},
-                    ]}
+                        ],
+                    'lists' : []
+                    }
+            Edatool._extend_options(options, Yosys)
+
+            return {'description' : "The Vivado backend executes Xilinx Vivado to build systems and program the FPGA",
+                    'members' : options['members'],
+                    'lists' : options['lists']}
 
     """ Get tool version
 
@@ -107,14 +100,12 @@ class Vivado(Edatool):
             if has_vhdl or has_vhdl2008:
                 logger.error("VHDL files are not supported in Yosys.")
 
-            yosys_synth_options = self.tool_options.get('yosys_synth_options', [])
-            yosys_read_options = self.tool_options.get('yosys_read_options', [])
             self.edam['tool_options'] = \
                 {'yosys' : {
                     'arch' : 'xilinx',
                     'output_format' : 'edif',
-                    'yosys_synth_options' : yosys_synth_options,
-                    'yosys_read_options' : yosys_read_options,
+                    'yosys_synth_options' : self.tool_options.get('yosys_synth_options', []),
+                    'yosys_read_options' : self.tool_options.get('yosys_read_options', []),
                     'yosys_as_subtool' : True,
                     'script_name'   : 'yosys.tcl',
                     'surelog_options' : self.tool_options.get('surelog_options', []),

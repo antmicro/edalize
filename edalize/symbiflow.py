@@ -9,7 +9,9 @@ import re
 import subprocess
 
 from edalize.edatool import Edatool
+from edalize.yosys import Yosys
 from edalize.surelog import Surelog
+from edalize.nextpnr import Nextpnr
 from importlib import import_module
 
 logger = logging.getLogger(__name__)
@@ -34,7 +36,7 @@ class Symbiflow(Edatool):
     @classmethod
     def get_doc(cls, api_ver):
         if api_ver == 0:
-            symbiflow_help = {
+            options = {
                 "members": [
                     {
                         "name" : "arch",
@@ -66,36 +68,16 @@ class Symbiflow(Edatool):
                         "type": "String",
                         "desc": "Additional options for VPR tool. If not used, default options for the tool will be used",
                     },
-                    {
-                        "name": "nextpnr_options",
-                        "type": "String",
-                        "desc": "Additional options for Nextpnr tool. If not used, default options for the tool will be used",
-                    },
-                    {
-                        "name" : "yosys_frontend",
-                        "type" : "String",
-                        "desc" : 'Select yosys frontend. Currently "uhdm" and "verilog" frontends are supported.'
-                    },
-                    {
-                        "name" : "library_files",
-                        "type" : "String",
-                        "desc" : "list of the library files for surelog"
-                    }
-                ],
-                'lists' : [
-                        {'name' : 'surelog_options',
-                         'type' : 'String',
-                         'desc' : 'List of options for yosys frontend'},
                 ],
             }
-
-            symbiflow_members = symbiflow_help["members"]
-            symbiflow_lists = symbiflow_help["lists"]
+            Edatool._extend_options(options, Yosys)
+            Edatool._extend_options(options, Surelog)
+            Edatool._extend_options(options, Nextpnr)
 
             return {
                 "description": "The Symbiflow backend executes Yosys sythesis tool and VPR/Nextpnr place and route. It can target multiple different FPGA vendors",
-                "members": symbiflow_members,
-                "lists": symbiflow_lists,
+                "members": options["members"],
+                "lists": options["lists"],
             }
 
     def get_version(self):
@@ -123,7 +105,7 @@ class Symbiflow(Edatool):
             },
              "surelog" : {
                 'library_files' : self.tool_options.get('library_files', []),
-                'arch' : arch,
+                'arch' : vendor,
                 'surelog_options' : self.tool_options.get('surelog_options', []),
                 'surelog_as_subtool' : True,
             },
@@ -263,6 +245,7 @@ endif
             logger.error("ERROR: arch is not defined.")
 
         yosys_frontend = self.tool_options.get('yosys_frontend', "verilog")
+        vendor = self.tool_options.get("vendor")
         uhdm_mode = False
         if yosys_frontend in ["uhdm"]:
             uhdm_mode = True
@@ -281,7 +264,7 @@ endif
         if uhdm_mode:
             self.edam['tool_options'] = \
                 {"surelog" : {
-                    'arch' : arch,
+                    'arch' : vendor,
                     'surelog_options' : self.tool_options.get('surelog_options', []),
                     'surelog_as_subtool' : True,
                 },
@@ -293,7 +276,6 @@ endif
 
         part = self.tool_options.get("part")
         package = self.tool_options.get("package")
-        vendor = self.tool_options.get("vendor")
 
         if not part:
             logger.error('Missing required "part" parameter')
@@ -327,16 +309,14 @@ endif
         xdc_opts = ['-x']+placement_constraints if placement_constraints else []
 
         commands = self.EdaCommands()
-        if uhdm_mode:
-            depends = []
-            targets = [self.toplevel + '.uhdm']
-            command = ['make', '-f', 'surelog.mk']
-            commands.add(command, [targets], depends)
         #Synthesis
-        targets = self.toplevel+'.eblif'
         depends = []
         if uhdm_mode:
             depends = [self.toplevel + '.uhdm']
+            targets = [self.toplevel + '.uhdm']
+            command = ['make', '-f', 'surelog.mk']
+            commands.add(command, [targets], depends)
+        targets = self.toplevel+'.eblif'
         command = ['symbiflow_synth', '-t', self.toplevel]
         command += [['-v'] + file_list] if uhdm_mode else [self.toplevel + '.uhdm']
         command += ['-d', bitstream_device]
