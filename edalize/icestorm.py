@@ -7,7 +7,7 @@ import os.path
 from edalize.edatool import Edatool
 from edalize.nextpnr import Nextpnr
 from edalize.yosys import Yosys
-from edalize.Surelog import Surelog
+from edalize.surelog import Surelog
 
 class Icestorm(Edatool):
 
