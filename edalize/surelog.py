@@ -24,9 +24,6 @@ class Surelog(Edatool):
                         {'name' : 'makefile_name',
                          'type' : 'String',
                          'desc' : 'Generated makefile name, defaults to $name.mk'},
-                        {'name' : 'library_files',
-                         'type' : 'String',
-                         'desc' : 'List of the library files for Surelog'},
                         ],
                     'lists' : [
                         {'name' : 'surelog_options',
@@ -53,7 +50,7 @@ class Surelog(Edatool):
                     unused_files.append(f)
             else:
                 print(f"Got file without file_type, skipping it: {f}")
-        
+
         self.edam['files'] = unused_files
         of = [
             {'name' : self.toplevel+'.uhdm', 'file_type' : 'uhdm'},
@@ -63,8 +60,6 @@ class Surelog(Edatool):
         surelog_options = self.tool_options.get('surelog_options', [])
 
         arch = self.tool_options.get('arch', None)
-
-        library_files = self.tool_options.get('library_files', None)
 
         pattern = len(self.vlogparam.keys()) * " -P%s=%%s"
         verilog_params_command = pattern % tuple(self.vlogparam.keys()) % tuple(self.vlogparam.values())
@@ -76,20 +71,12 @@ class Surelog(Edatool):
         pattern = len(incdirs) * " -I%s"
         include_files_command = pattern % tuple(incdirs)
 
-        yosys_conf_out = subprocess.run(['yosys-config', '--datdir'],
-                        capture_output=True)
-        yosys_conf_path = yosys_conf_out.stdout.decode('ascii').strip()
         library_command = []
-        if library_files:
-            library_files = library_files.split(",")
-            pattern = len(library_files) * " -v %s"
-            library_command = pattern % tuple(library_files)
+        if arch in ['ecp5', 'ice40']:
+            library_command = ['-v', '$(shell yosys-config --datdir)'+'/'+arch+'/cells_bb.v']
         else:
-            if arch in ['ecp5', 'ice40']:
-                library_command = ['-v', yosys_conf_path+'/'+arch+'/cells_bb.v']
-            else:
-                library_command = ['-v', yosys_conf_path+'/'+arch+'/cells_xtra_surelog.v', '-v', yosys_conf_path+'/'+arch+'/cells_sim.v']
-        
+            library_command = ['-v', '$(shell yosys-config --datdir)'+'/'+arch+'/cells_xtra_surelog.v', '-v', '$(shell yosys-config --datdir)'+'/'+arch+'/cells_sim.v']
+
         commands = self.EdaCommands()
         depends = ''
         target = self.toplevel+'_build'
