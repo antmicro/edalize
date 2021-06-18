@@ -10,8 +10,6 @@ import subprocess
 
 from edalize.edatool import Edatool
 from edalize.yosys import Yosys
-from edalize.surelog import Surelog
-from edalize.nextpnr import Nextpnr
 from importlib import import_module
 
 logger = logging.getLogger(__name__)
@@ -71,8 +69,6 @@ class Symbiflow(Edatool):
                 ],
             }
             Edatool._extend_options(options, Yosys)
-            Edatool._extend_options(options, Surelog)
-            Edatool._extend_options(options, Nextpnr)
 
             return {
                 "description": "The Symbiflow backend executes Yosys sythesis tool and VPR/Nextpnr place and route. It can target multiple different FPGA vendors",
@@ -95,25 +91,23 @@ class Symbiflow(Edatool):
         # Yosys configuration
         yosys_synth_options = self.tool_options.get("yosys_synth_options", "")
         yosys_template = self.tool_options.get("yosys_template")
-        self.edam['tool_options'] = \
-            {"yosys" : {
-                "arch" : vendor,
-                "yosys_synth_options" : yosys_synth_options,
-                "yosys_template" : yosys_template,
-                "yosys_as_subtool" : True,
-                'surelog_options' : self.tool_options.get('surelog_options', []),
-            },
-             "surelog" : {
-                'library_files' : self.tool_options.get('library_files', []),
-                'arch' : vendor,
-                'surelog_options' : self.tool_options.get('surelog_options', []),
-                'surelog_as_subtool' : True,
-            },
+        self.edam['tool_options'] = {
+                "yosys" : {
+                    "arch" : vendor,
+                    "yosys_synth_options" : yosys_synth_options,
+                    "yosys_template" : yosys_template,
+                    "yosys_as_subtool" : True,
+                    'surelog_options' : self.tool_options.get('surelog_options', []),
+                }
             }
 
         yosys = Yosys(self.edam, self.work_root)
         yosys.configure()
 
+        # Nextpnr configuration
+        arch = self.tool_options.get("arch")
+        if arch not in self.archs:
+            logger.error('Missing or invalid "arch" parameter: {} in "tool_options"'.format(arch))
 
         package = self.tool_options.get("package")
         if not package:
@@ -136,7 +130,7 @@ class Symbiflow(Edatool):
         device = None
         placement_constraints = []
 
-        for f in self.edam['files']:
+        for f in src_files:
             if f.file_type in ["bba"]:
                 chipdb = f.name
             elif f.file_type in ["device"]:

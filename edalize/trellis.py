@@ -7,7 +7,6 @@ import os.path
 from edalize.edatool import Edatool
 from edalize.nextpnr import Nextpnr
 from edalize.yosys import Yosys
-from edalize.surelog import Surelog
 
 class Trellis(Edatool):
 
@@ -22,7 +21,6 @@ class Trellis(Edatool):
 
             Edatool._extend_options(options, Yosys)
             Edatool._extend_options(options, Nextpnr)
-            Edatool._extend_options(options, Surelog)
 
             return {'description' : "Project Trellis enables a fully open-source flow for ECP5 FPGAs using Yosys for Verilog synthesis and nextpnr for place and route",
                     'members' : options['members'],
