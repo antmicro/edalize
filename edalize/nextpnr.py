@@ -55,7 +55,7 @@ class Nextpnr(Edatool):
         commands = self.EdaCommands()
 
         arch = self.flow_config['arch']
-	arch_options = []
+        arch_options = []
         if arch == 'ecp5':
             targets = self.name+'.config'
             constraints = ['--lpf' , lpf_file] if lpf_file else []
