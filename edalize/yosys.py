@@ -67,35 +67,32 @@ class Yosys(Edatool):
         if not arch:
             logger.error("ERROR: arch is not defined.")
 
-        self.edam['tool_options'] = \
-            {'surelog' : {
-                'arch' : arch,
-                'surelog_options' : self.tool_options.get('surelog_options', []),
-                'library_files' : self.tool_options.get('library_files', []),
-                'surelog_as_subtool' : True,
-            },
-             'sv2v' : {
-                'sv2v_options' : self.tool_options.get('surelog_options', []),
-                'sv2v_as_subtool' : True,
-            },
-            }
         yosys_synth_options = self.tool_options.get('yosys_synth_options', [])
         use_surelog = False
         use_sv2v = False
 
         if "frontend=surelog" in yosys_synth_options:
+            self.edam['tool_options'] = {'surelog' : {
+                    'arch' : arch,
+                    'surelog_options' : self.tool_options.get('surelog_options', []),
+                    'library_files' : self.tool_options.get('library_files', []),
+                    'surelog_as_subtool' : True,
+                    }
+                }
             use_surelog = True
             yosys_synth_options.remove("frontend=surelog")
-        elif "frontend=sv2v" in yosys_synth_options:
-            use_sv2v = True
-            yosys_synth_options.remove("frontend=sv2v")
-
-        if use_surelog:
             surelog = Surelog(self.edam, self.work_root)
             surelog.configure()
             self.vlogparam.clear() # vlogparams are handled by Surelog
             self.vlogdefine.clear() # vlogdefines are handled by Surelog
-        elif use_sv2v:
+        elif "frontend=sv2v" in yosys_synth_options:
+            self.edam['tool_options'] = {'sv2v' : {
+                        'sv2v_options' : self.tool_options.get('sv2v_options', []),
+                        'sv2v_as_subtool' : True
+                        }
+                    }
+            use_sv2v = True
+            yosys_synth_options.remove("frontend=sv2v")
             sv2v = Sv2v(self.edam, self.work_root)
             sv2v.configure()
 
@@ -173,13 +170,13 @@ class Yosys(Edatool):
                                  template_vars)
 
         commands = self.EdaCommands()
-        additional_deps = []
+        additional_deps = ""
         if use_surelog:
             commands.commands += surelog.commands
             additional_deps = self.toplevel + '.uhdm'
         elif use_sv2v:
             commands.commands += sv2v.commands
-            additional_deps = sv_files
+            additional_deps = self.name+".sv2v"
 
         commands.add(['yosys', '-l', 'yosys.log', '-p', f'"tcl {template}"'],
                          [f'{self.name}.{output}' for output in ['blif', 'json','edif']],

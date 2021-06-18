@@ -99,6 +99,7 @@ class Vivado(Edatool):
                 'yosys_synth_options' : self.tool_options.get('yosys_synth_options', []),
                 'yosys_read_options' : self.tool_options.get('yosys_read_options', []),
                 'surelog_options' : self.tool_options.get('surelog_options', []),
+                'sv2v_options' : self.tool_options.get('sv2v_options', []),
                 'yosys_as_subtool' : True,
             }
 

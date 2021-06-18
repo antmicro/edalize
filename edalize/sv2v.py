@@ -34,18 +34,21 @@ class Sv2v(Edatool):
 
         for f in self.files:
             src = ""
-            if f.get('file_type', '').startswith('systemVerilogSource'):
-                src = f['name']
+            if "file_type" in f:
+                if f['file_type'].startswith('systemVerilogSource'):
+                    src = f['name']
 
-            if src:
-                if not self._add_include_dir(f, incdirs):
-                    file_table.append(src)
+                if src:
+                    if not self._add_include_dir(f, incdirs):
+                        file_table.append(src)
+                else:
+                    unused_files.append(f)
             else:
-                unused_files.append(f)
+                print(f"Skipping file without file_type: {f}")
 
         self.edam['files'] = unused_files
         of = [
-            {'name' : name+'.v', 'file_type' : 'verilogSource'} for name in file_table
+            {'name' : name.replace('.sv', '.v'), 'file_type' : 'verilogSource'} for name in file_table
         ]
         self.edam['files'] += of
 
@@ -54,16 +57,19 @@ class Sv2v(Edatool):
 
         sv2v_options = self.tool_options.get('sv2v_options', [])
 
+        if "--write=adjacent" not in sv2v_options:
+            sv2v_options.append("--write=adjacent")
+
         sv2v_options = ' '.join(sv2v_options) + " " + verilog_defines_command
         incdirs = ' '.join(['--incdir='+d for d in incdirs])
         sv_sources = ' '.join(file_table)
 
         commands = self.EdaCommands()
-        commands.set_default_target(self.name)
+        commands.set_default_target(self.name+".sv2v")
         depends = []
-        targets = [self.name]
-        command = ['sv2s' , sv2v_options, incdirs, sv_sources]
-        commands.add(command, [depends], [targets])
+        targets = [self.name+".sv2v"]
+        command = ['sv2v' , sv2v_options, incdirs, sv_sources]
+        commands.add(command, targets, depends)
 
         if self.tool_options.get('sv2v_as_subtool'):
             self.commands = commands.commands
