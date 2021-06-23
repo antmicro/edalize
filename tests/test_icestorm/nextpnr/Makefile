@@ -2,7 +2,7 @@
 
 all: test_icestorm_0.bin
 
-test_icestorm_0.blif test_icestorm_0.json test_icestorm_0.edif: edalize_yosys_template.tcl
+test_icestorm_0.blif test_icestorm_0.json test_icestorm_0.edif: edalize_yosys_template.tcl 
 	$(EDALIZE_LAUNCHER) yosys -l yosys.log -p "tcl edalize_yosys_template.tcl"
 
 test_icestorm_0.asc: test_icestorm_0.json
@@ -15,11 +15,11 @@ test_icestorm_0.bin: test_icestorm_0.asc
 	$(EDALIZE_LAUNCHER) icepack test_icestorm_0.asc test_icestorm_0.bin
 
 test_icestorm_0.tim: test_icestorm_0.asc
-	$(EDALIZE_LAUNCHER) icetime -tmd  test_icestorm_0.asc test_icestorm_0.tim
+	$(EDALIZE_LAUNCHER) icetime -tmd  test_icestorm_0.asc -r test_icestorm_0.tim
 
 timing: test_icestorm_0.tim
 
 test_icestorm_0.stat: test_icestorm_0.asc
-	$(EDALIZE_LAUNCHER) icebox_stat test_icestorm_0.asc test_icestorm_0.stat
+	$(EDALIZE_LAUNCHER) icebox_stat test_icestorm_0.asc > test_icestorm_0.stat
 
 stats: test_icestorm_0.stat
