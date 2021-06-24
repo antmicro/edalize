@@ -234,10 +234,6 @@ endif
         placement_constraints = []
         user_files = []
 
-        arch = self.tool_options.get("arch")
-        if not arch:
-            logger.error("ERROR: arch is not defined.")
-
         yosys_frontend = self.tool_options.get('yosys_frontend', "verilog")
         vendor = self.tool_options.get("vendor")
         uhdm_mode = False
@@ -308,7 +304,7 @@ endif
             commands = surelog.commands
         targets = self.toplevel+'.eblif'
         command = ['symbiflow_synth', '-t', self.toplevel]
-        command += [['-v'] + file_list] if not uhdm_mode else [self.toplevel + '.uhdm']
+        command += ['-v'] + file_list if not uhdm_mode else [self.toplevel + '.uhdm']
         command += ['-d', bitstream_device]
         command += ['-p' if vendor == 'xilinx' else '-P', partname]
         command += xdc_opts
@@ -318,7 +314,7 @@ endif
         eblif_opt = ['-e', self.toplevel+'.eblif']
         device_opt = ['-d', part+'_'+device_suffix]
 
-        depends = [self.toplevel+'.eblif']
+        depends = self.toplevel+'.eblif'
         targets = self.toplevel+'.net'
         command = ['symbiflow_pack'] + eblif_opt + device_opt + sdc_opts + vpr_options
         commands.add(command, [targets], [depends])

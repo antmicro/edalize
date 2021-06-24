@@ -69,7 +69,7 @@ class Yosys(Edatool):
         yosys_synth_options = self.tool_options.get('yosys_synth_options', [])
 
         commands = self.EdaCommands()
-        additional_deps = ""
+        additional_deps = []
 
         if "frontend=surelog" in yosys_synth_options:
             self.edam['tool_options'] = {'surelog' : {
@@ -85,7 +85,7 @@ class Yosys(Edatool):
             self.vlogparam.clear() # vlogparams are handled by Surelog
             self.vlogdefine.clear() # vlogdefines are handled by Surelog
             commands.commands += surelog.commands
-            additional_deps = self.toplevel + '.uhdm'
+            additional_deps = [self.toplevel + '.uhdm']
             self.edam['files'] = surelog.edam['files']
         elif "frontend=sv2v" in yosys_synth_options:
             self.edam['tool_options'] = {'sv2v' : {
@@ -97,7 +97,7 @@ class Yosys(Edatool):
             sv2v = Sv2v(self.edam, self.work_root)
             sv2v.configure()
             commands.commands += sv2v.commands
-            additional_deps = self.name+".sv2v"
+            additional_deps = [self.name+".sv2v"]
 
         incdirs = []
         file_table = []
@@ -172,7 +172,7 @@ class Yosys(Edatool):
 
         commands.add(['yosys', '-l', 'yosys.log', '-p', f'"tcl {template}"'],
                          [f'{self.name}.{output}' for output in ['blif', 'json','edif']],
-                         [template, additional_deps])
+                         [template] + additional_deps)
         if self.tool_options.get('yosys_as_subtool'):
             self.commands = commands.commands
         else:
