@@ -71,6 +71,8 @@ class Yosys(Edatool):
         commands = self.EdaCommands()
         additional_deps = []
 
+        self.edam['files'] = [] if not 'files' in self.edam else self.edam['files']
+
         if "frontend=surelog" in yosys_synth_options:
             self.edam['tool_options'] = {'surelog' : {
                     'arch' : arch,
@@ -96,6 +98,7 @@ class Yosys(Edatool):
             yosys_synth_options.remove("frontend=sv2v")
             sv2v = Sv2v(self.edam, self.work_root)
             sv2v.configure()
+            self.edam['files'] = sv2v.edam['files']
             commands.commands += sv2v.commands
             additional_deps = [self.name+".sv2v"]
 

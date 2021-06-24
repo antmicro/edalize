@@ -130,7 +130,7 @@ class Vivado(Edatool):
                 if f['file_type'] == 'vhdlSource-2008':
                     has_vhdl2008 = True
                     cmd += ' -vhdl2008'
-                if f['logical_name']:
+                if f.get('logical_name'):
                     cmd += ' -library '+f['logical_name']
             elif f['file_type'] == 'xci':
                 cmd = 'read_ip'

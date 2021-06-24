@@ -304,7 +304,7 @@ endif
             commands = surelog.commands
         targets = self.toplevel+'.eblif'
         command = ['symbiflow_synth', '-t', self.toplevel]
-        command += ['-v'] + file_list if not uhdm_mode else [self.toplevel + '.uhdm']
+        command += ['-v' , *file_list] if not uhdm_mode else [self.toplevel + '.uhdm']
         command += ['-d', bitstream_device]
         command += ['-p' if vendor == 'xilinx' else '-P', partname]
         command += xdc_opts
