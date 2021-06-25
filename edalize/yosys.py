@@ -70,6 +70,7 @@ class Yosys(Edatool):
 
         commands = self.EdaCommands()
         additional_deps = []
+        plugins = []
 
         self.edam['files'] = [] if not 'files' in self.edam else self.edam['files']
 
@@ -89,6 +90,7 @@ class Yosys(Edatool):
             commands.commands += surelog.commands
             additional_deps = [self.toplevel + '.uhdm']
             self.edam['files'] = surelog.edam['files']
+            plugins += ['uhdm']
         elif "frontend=sv2v" in yosys_synth_options:
             self.edam['tool_options'] = {'sv2v' : {
                         'sv2v_options' : self.tool_options.get('sv2v_options', []),
@@ -105,6 +107,7 @@ class Yosys(Edatool):
         incdirs = []
         file_table = []
         unused_files = []
+
         for f in self.edam['files']:
             cmd = ""
             if "file_type" in f:
@@ -163,6 +166,7 @@ class Yosys(Edatool):
                 'edif_opts'           : '-pvector bra' if arch=='xilinx' else '',
                 'yosys_template'      : template,
                 'name'                : self.name,
+                'plugins'             : "plugin -i %s \n"*len(plugins) % tuple(plugins)
         }
         self.render_template('edalize_yosys_procs.tcl.j2',
                              'edalize_yosys_procs.tcl',
