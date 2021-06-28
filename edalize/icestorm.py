@@ -44,6 +44,8 @@ class Icestorm(Edatool):
                 'yosys_synth_options' : yosys_synth_options,
                 'yosys_as_subtool' : True,
                 'yosys_template' : self.tool_options.get('yosys_template'),
+                'yosys_read_options' : self.tool_options.get('yosys_read_options', []),
+                'surelog_options' : self.tool_options.get('surelog_options', [])
             },
              'nextpnr' : {
                  'nextpnr_options' : self.tool_options.get('nextpnr_options', [])
