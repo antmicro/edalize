@@ -1,4 +1,5 @@
 yosys -import
+
 source edalize_yosys_procs.tcl
 
 verilog_defaults -push
@@ -15,4 +16,4 @@ synth $top
 
 write_blif $name.blif
 write_json $name.json
-write_edif $name.edif
+write_edif  $name.edif
