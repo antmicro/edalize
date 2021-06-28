@@ -1,4 +1,5 @@
 yosys -import
+
 source edalize_yosys_procs.tcl
 
 verilog_defaults -push

@@ -22,7 +22,7 @@ test_icestorm_0.tim: test_icestorm_0.asc
 timing: test_icestorm_0.tim
 
 test_icestorm_0.stat: test_icestorm_0.asc
-	$(EDALIZE_LAUNCHER) icebox_stat test_icestorm_0.asc test_icestorm_0.stat
+	$(EDALIZE_LAUNCHER) icebox_stat test_icestorm_0.asc > test_icestorm_0.stat
 
 stats: test_icestorm_0.stat
 
