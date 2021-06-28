@@ -57,6 +57,22 @@ class Icestorm(Edatool):
 
     def configure_main(self):
         self.icestorm.configure()
+        #Pass icestorm tool options to yosys and nextpnr
+        self.edam['tool_options'] = \
+            {'yosys' : {
+                'arch' : 'ice40',
+                'yosys_synth_options' : yosys_synth_options,
+                'yosys_as_subtool' : True,
+                'yosys_template' : self.tool_options.get('yosys_template'),
+                'yosys_read_options' : self.tool_options.get('yosys_read_options', []),
+                'surelog_options' : self.tool_options.get('surelog_options', [])
+            },
+             'nextpnr' : {
+                 'nextpnr_options' : self.tool_options.get('nextpnr_options', [])
+             },
+             }
+        yosys = Yosys(self.edam, self.work_root)
+        yosys.configure()
 
     def build_pre(self):
         pass
