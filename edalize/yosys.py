@@ -75,13 +75,13 @@ class Yosys(Edatool):
         self.edam['files'] = [] if not 'files' in self.edam else self.edam['files']
 
         if "frontend=surelog" in yosys_synth_options:
-            self.edam['tool_options'] = {'surelog' : {
+            self.edam['tool_options'].update({'surelog' : {
                     'arch' : arch,
                     'surelog_options' : self.tool_options.get('surelog_options', []),
                     'library_files' : self.tool_options.get('library_files', []),
                     'surelog_as_subtool' : True,
                     }
-                }
+                })
             yosys_synth_options.remove("frontend=surelog")
             surelog = Surelog(self.edam, self.work_root)
             surelog.configure()
@@ -92,11 +92,11 @@ class Yosys(Edatool):
             self.edam['files'] = surelog.edam['files']
             plugins += ['uhdm']
         elif "frontend=sv2v" in yosys_synth_options:
-            self.edam['tool_options'] = {'sv2v' : {
+            self.edam['tool_options'].update({'sv2v' : {
                         'sv2v_options' : self.tool_options.get('sv2v_options', []),
                         'sv2v_as_subtool' : True
                         }
-                    }
+                    })
             yosys_synth_options.remove("frontend=sv2v")
             sv2v = Sv2v(self.edam, self.work_root)
             sv2v.configure()
