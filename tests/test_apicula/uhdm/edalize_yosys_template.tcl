@@ -1,8 +1,7 @@
 yosys -import
-{{ plugins }}
-{% if plugins %}
+plugin -i uhdm 
+
 yosys -import
-{% endif %}
 source edalize_yosys_procs.tcl
 
 verilog_defaults -push
@@ -19,4 +18,4 @@ synth $top
 
 write_blif $name.blif
 write_json $name.json
-write_edif {{ edif_opts }} $name.edif
+write_edif  $name.edif

@@ -1,9 +1,9 @@
 proc read_files {} {
-read_verilog -sv {sv_file.sv}
-source {tcl_file.tcl}
-read_verilog {vlog_file.v}
-read_verilog {vlog05_file.v}
-read_verilog -sv {another_sv_file.sv}
+read_verilog -sv  {sv_file.sv}
+source  {tcl_file.tcl}
+read_verilog  {vlog_file.v}
+read_verilog  {vlog05_file.v}
+read_verilog -sv  {another_sv_file.sv}
 }
 
 proc set_defines {} {
