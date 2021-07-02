@@ -41,6 +41,20 @@ def test_apicula_minimal(make_edalize_test):
 
     run_apicula_test(tf)
 
+def test_apicula_uhdm(make_edalize_test):
+    tool_options = {
+        'device' : 'GW1N-LV1QN48C6/I5',
+        'yosys_synth_options': ['frontend=surelog'],
+    }
+    tf = make_edalize_test('apicula',
+                           param_types=[],
+                           files=[],
+                           tool_options = tool_options,
+                           ref_dir='uhdm')
+
+    tf.backend.configure()
+
+    tf.compare_files(['Makefile', 'edalize_yosys_procs.tcl', 'edalize_yosys_template.tcl'])
 
 def test_apicula_multiple_cst(make_edalize_test):
     files = [
