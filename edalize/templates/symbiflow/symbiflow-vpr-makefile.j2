@@ -10,11 +10,10 @@ SDC	:= {{ sdc }}
 PCF	:= {{ pcf }}
 XDC	:= {{ xdc }}
 BUILDDIR:= {{ builddir }}
-TOOLCHAIN_PREFIX := {{ toolchain_prefix }}
-{% if toolchain_prefix -%}
-WRITE_BITSTREAM_PART_PARAMETER = "-p"
-{% else %}
+{% if toolchain == "quicklogic" -%}
 WRITE_BITSTREAM_PART_PARAMETER = "-P"
+{% else %}
+WRITE_BITSTREAM_PART_PARAMETER = "-p"
 {%- endif %}
 
 {% if environment_script -%}
@@ -56,22 +55,22 @@ ${BUILDDIR}:
 	mkdir ${BUILDDIR}
 
 ${TOP}.eblif: | ${BUILDDIR}
-	${SOURCE_OPTS} cd ${BUILDDIR} && ${TOOLCHAIN_PREFIX}synth -t ${TOP} -v ${VERILOG} -d ${BITSTREAM_DEVICE} -p ${PCF} -P ${PARTNAME} ${XDC_OPTS}
+	${SOURCE_OPTS} cd ${BUILDDIR} && symbiflow_synth -t ${TOP} -v ${VERILOG} -d ${BITSTREAM_DEVICE} -p ${PCF} -P ${PARTNAME} ${XDC_OPTS}
 
 ${TOP}.net: ${TOP}.eblif
-	${SOURCE_OPTS} cd ${BUILDDIR} && ${VPR_OPTIONS} ${TOOLCHAIN_PREFIX}pack -e ${TOP}.eblif -d ${DEVICE} ${SDC_OPTS}
+	${SOURCE_OPTS} cd ${BUILDDIR} && ${VPR_OPTIONS} symbiflow_pack -e ${TOP}.eblif -d ${DEVICE} ${SDC_OPTS}
 
 ${TOP}.place: ${TOP}.net
-	${SOURCE_OPTS} cd ${BUILDDIR} && ${VPR_SEED} ${VPR_OPTIONS} ${TOOLCHAIN_PREFIX}place -e ${TOP}.eblif -d ${DEVICE} -n ${TOP}.net -P ${PARTNAME} ${SDC_OPTS} ${PCF_OPTS}
+	${SOURCE_OPTS} cd ${BUILDDIR} && ${VPR_SEED} ${VPR_OPTIONS} symbiflow_place -e ${TOP}.eblif -d ${DEVICE} -n ${TOP}.net -P ${PARTNAME} ${SDC_OPTS} ${PCF_OPTS}
 
 ${TOP}.route: ${TOP}.place
-	${SOURCE_OPTS} cd ${BUILDDIR} && ${VPR_OPTIONS} ${TOOLCHAIN_PREFIX}route -e ${TOP}.eblif -d ${DEVICE} ${SDC_OPTS}
+	${SOURCE_OPTS} cd ${BUILDDIR} && ${VPR_OPTIONS} symbiflow_route -e ${TOP}.eblif -d ${DEVICE} ${SDC_OPTS}
 
 ${TOP}.fasm: ${TOP}.route
-	${SOURCE_OPTS} cd ${BUILDDIR} && ${VPR_OPTIONS} ${TOOLCHAIN_PREFIX}write_fasm -e ${TOP}.eblif -d ${DEVICE} ${SDC_OPTS}
+	${SOURCE_OPTS} cd ${BUILDDIR} && ${VPR_OPTIONS} symbiflow_write_fasm -e ${TOP}.eblif -d ${DEVICE} ${SDC_OPTS}
 
 ${TOP}.bit: ${TOP}.fasm
-	${SOURCE_OPTS} cd ${BUILDDIR} && ${TOOLCHAIN_PREFIX}write_bitstream -d ${BITSTREAM_DEVICE} -f ${TOP}.fasm ${WRITE_BITSTREAM_PART_PARAMETER} ${PARTNAME} -b ${TOP}.bit
+	${SOURCE_OPTS} cd ${BUILDDIR} && symbiflow_write_bitstream -d ${BITSTREAM_DEVICE} -f ${TOP}.fasm ${WRITE_BITSTREAM_PART_PARAMETER} ${PARTNAME} -b ${TOP}.bit
 
 {% if fasm2bels %}
 timing_summary.rpt: ${TOP}.bit.v

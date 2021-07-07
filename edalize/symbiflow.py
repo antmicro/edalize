@@ -262,14 +262,14 @@ class Symbiflow(Edatool):
             if part == 'xc7a35t':
                 part = 'xc7a50t'
             device_suffix = 'test'
-            toolchain_prefix = 'symbiflow_'
+            toolchain = 'symbiflow'
         elif vendor == 'quicklogic':
             partname = package
             device_suffix = 'wlcsp'
             bitstream_device = part + "_" + device_suffix
             # Newest Quicklogic toolchain release do not have any toolchain_prefix
             # if if will change in the future this variable should be adjusted.
-            toolchain_prefix = ''
+            toolchain = 'quicklogic'
 
         options = self.tool_options.get('options', None)
 
@@ -322,7 +322,7 @@ class Symbiflow(Edatool):
             'dbroot': dbroot,
             'seed': seed,
             'device_suffix': device_suffix,
-            'toolchain_prefix': toolchain_prefix,
+            'toolchain': toolchain,
             'environment_script': environment_script,
         }
 
