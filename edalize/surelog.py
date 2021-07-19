@@ -37,7 +37,7 @@ class Surelog(Edatool):
         unused_files = []
         for f in self.files:
             src = ""
-            if "file_type" in f: 
+            if "file_type" in f:
                 if f['file_type'].startswith('verilogSource'):
                     src = f['name']
                 elif f['file_type'].startswith('systemVerilogSource'):
@@ -71,16 +71,10 @@ class Surelog(Edatool):
         pattern = len(incdirs) * " -I%s"
         include_files_command = pattern % tuple(incdirs)
 
-        library_command = []
-        if arch in ['ecp5', 'ice40']:
-            library_command = ['-v', '$(shell yosys-config --datdir)'+'/'+arch+'/cells_bb.v']
-        else:
-            library_command = ['-v', '$(shell yosys-config --datdir)'+'/'+arch+'/cells_xtra_surelog.v', '-v', '$(shell yosys-config --datdir)'+'/'+arch+'/cells_sim.v']
-
         commands = self.EdaCommands()
         depends = ''
         target = self.toplevel+'_build'
-        command = ['surelog', ' '.join(surelog_options), '-parse', ' '.join(library_command),
+        command = ['surelog', ' '.join(surelog_options), '-parse',
                 verilog_defines_command, verilog_params_command,
                 include_files_command, ' '.join(file_table)]
         commands.add(command, [target], [depends])

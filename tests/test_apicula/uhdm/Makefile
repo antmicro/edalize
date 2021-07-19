@@ -3,7 +3,7 @@
 all: test_apicula_0.fs
 
 top_module_build: 
-	$(EDALIZE_LAUNCHER) surelog  -parse -v $(shell yosys-config --datdir)/gowin/cells_xtra_surelog.v -v $(shell yosys-config --datdir)/gowin/cells_sim.v    
+	$(EDALIZE_LAUNCHER) surelog  -parse    
 
 top_module.uhdm: top_module_build
 	$(EDALIZE_LAUNCHER) cp slpp_all/surelog.uhdm top_module.uhdm
