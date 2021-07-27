@@ -110,6 +110,8 @@ class Yosys(Edatool):
                     cmd = 'read_verilog'
                 elif f.file_type.startswith('systemVerilogSource'):
                     cmd = 'read_verilog -sv'
+                elif f.file_type.startswith('yosys_lib'):
+                    cmd = 'read_verilog -lib'
                 elif f.file_type == 'tclSource':
                     cmd = 'source'
                 else:
