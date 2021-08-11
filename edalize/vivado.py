@@ -33,6 +33,9 @@ class Vivado(Edatool):
         if api_ver == 0:
             return {'description' : "The Vivado backend executes Xilinx Vivado to build systems and program the FPGA",
                     'members' : [
+                        {'name' : 'vivado-settings',
+                         'type' : 'String',
+                         'desc' : 'Path to vivado settings (e.g. /opt/Xilinx/Vivado/2017.2/settings64.sh'},
                         {'name' : 'part',
                          'type' : 'String',
                          'desc' : 'FPGA part number (e.g. xc7a35tcsg324-1)'},
@@ -54,6 +57,17 @@ class Vivado(Edatool):
                         {'name' : 'hw_target',
                         'type' : 'Description',
                         'desc' : 'A pattern matching a board identifier. Refer to the Vivado documentation for ``get_hw_targets`` for details. Example: ``*/xilinx_tcf/Digilent/123456789123A``'},
+                    ],
+                    'lists' : [
+                        {'name' : 'yosys_synth_options',
+                         'type' : 'String',
+                         'desc' :'Additional options for synth command'},
+                        {'name' : 'yosys_read_options',
+                         'type' : 'String',
+                         'desc' : 'Additional options for Yosys\' read command'},
+                        {'name' : 'frontend_options',
+                         'type' : 'String',
+                         'desc' : 'Additional options for the Yosys frontend'},
                     ]}
 
     """ Get tool version
@@ -91,7 +105,9 @@ class Vivado(Edatool):
                 'arch' : 'xilinx',
                 'output_format' : 'edif',
                 'yosys_synth_options' : self.tool_options.get('yosys_synth_options', []),
+                'yosys_read_options' : self.tool_options.get('yosys_read_options', []),
                 'yosys_as_subtool' : True,
+                'frontend_options' : self.tool_options.get('frontend_options', [])
             }
 
             yosys = Yosys(self.edam, self.work_root)
@@ -178,7 +194,10 @@ class Vivado(Edatool):
         # Write Makefile
         commands = self.EdaCommands()
 
-        vivado_command = ['vivado', '-notrace', '-mode', 'batch', '-source']
+        vivado_settings = self.tool_options.get('vivado-settings', None)
+        vivado = f"source {vivado_settings} && vivado" if vivado_settings else "vivado"
+
+        vivado_command = [vivado, '-notrace', '-mode', 'batch', '-source']
 
         #Create project file
         project_file = self.name+'.xpr'
