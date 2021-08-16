@@ -67,8 +67,10 @@ class Yosys(Edatool):
             logger.error("ERROR: arch is not defined.")
 
         use_surelog = False
+        plugins = []
         if "frontend=surelog" in yosys_synth_options:
             use_surelog = True
+            plugins += ['uhdm']
             yosys_synth_options.remove("frontend=surelog")
 
         if use_surelog:
@@ -142,7 +144,8 @@ class Yosys(Edatool):
                 'default_target'      : output_format,
                 'edif_opts'           : '-pvector bra' if arch=='xilinx' else '',
                 'yosys_template'      : template,
-                'name'                : self.name
+                'name'                : self.name,
+                'plugins'             : "plugin -i %s \n"*len(plugins) % tuple(plugins),
         }
 
         self.render_template('edalize_yosys_procs.tcl.j2',

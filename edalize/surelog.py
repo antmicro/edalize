@@ -50,7 +50,6 @@ class Surelog(Edatool):
         include_files_command = pattern % tuple(incdirs)
 
         commands = self.EdaCommands()
-        share_path = os.path.join(os.path.dirname(shutil.which("uhdm-yosys")), "../share/uhdm-yosys")
         commands.add(["surelog", f"{' '.join(surelog_options)}", "-parse", f"{verilog_defines_command}",
                       f"{verilog_params_command}", f"-top {self.toplevel}", f"{include_files_command}",
                       f"{' '.join(verilog_file_list)}", f"{' '.join(systemverilog_file_list)}"],
