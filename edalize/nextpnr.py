@@ -23,6 +23,7 @@ class Nextpnr(Edatool):
         cst_file = ""
         lpf_file = ""
         pcf_file = ""
+        pdc_file = ""
         netlist = ""
         unused_files = []
         for f in self.files:
@@ -38,6 +39,10 @@ class Nextpnr(Edatool):
                 if pcf_file:
                     raise RuntimeError("Nextpnr only supports one PCF file. Found {} and {}".format(pcf_file, f['name']))
                 pcf_file = f['name']
+            if f['file_type'] == 'PDC':
+                if pdc_file:
+                    raise RuntimeError("Nextpnr only supports one PCF file. Found {} and {}".format(pdc_file, f['name']))
+                pdc_file = f['name']
             elif f['file_type'] == 'jsonNetlist':
                 if netlist:
                     raise RuntimeError("Nextpnr only supports one netlist. Found {} and {}".format(netlist, f['name']))
@@ -68,6 +73,11 @@ class Nextpnr(Edatool):
             targets = self.name+'.pack'
             constraints = ['--cst' , cst_file] if cst_file else []
             output = ['--write' , targets]
+        if arch == 'nexus':
+            print(self.tool_options)
+            targets = self.name+'.fasm'
+            constraints = ['--pdc' , pdc_file] if pdc_file else []
+            output = ['--fasm' , targets]
         else:
             targets = self.name+'.asc'
             constraints = ['--pcf' , pcf_file] if pcf_file else []
