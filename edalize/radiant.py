@@ -15,17 +15,33 @@ class Radiant(Edatool):
     @classmethod
     def get_doc(cls, api_ver):
         if api_ver == 0:
-            return {'description' : "Backend for Lattice Radiant",
-                    'members' : [
-                        {'name' : 'part',
-                         'type' : 'String',
-                         'desc' : 'FPGA part number (e.g. LIFCL-40-9BG400C)'},
-                    ]}
+            return {
+                "description": "Backend for Lattice Radiant",
+                "members": [
+                    {
+                        "name": "part",
+                        "type": "String",
+                        "desc": "FPGA part number (e.g. LIFCL-40-9BG400C)",
+                    },
+                    {
+                        'name' : 'synth',
+                        'type' : 'String',
+                        'desc' : 'Synthesis tool name.'
+                    },
+                    {
+                        'name' : 'strategy',
+                        'type' : 'String',
+                        'desc' : 'Value to a strategy item.'
+                    },
+                ],
+            }
 
     def configure_main(self):
         (src_files, incdirs) = self._get_fileset_files()
         pdc_file = None
-        prj_name = self.name.replace('.','_')
+        prj_name = self.name.replace(".", "_")
+        synth_tool = self.tool_options.get("synth", [])
+        strategy = self.tool_options.get("strategy", [])
         for f in src_files:
             if f.file_type == 'PDC':
                 if pdc_file:
@@ -38,10 +54,21 @@ class Radiant(Edatool):
 prj_create -name {} -impl "impl" -dev {}
 prj_set_impl_opt top {}
 """
-            f.write(TCL_TEMPLATE.format(prj_name,
-                                        self.tool_options['part'],
-                                        self.toplevel,
-            ))
+            f.write(
+                TCL_TEMPLATE.format(
+                    prj_name,
+                    self.tool_options["part"],
+                    self.toplevel,
+                )
+            )
+            if synth_tool:
+                _s = 'prj_set_impl_opt -impl "impl" synthesis {}'
+                f.write(_s.format(synth_tool))
+                f.write('\n')
+            if strategy:
+                _s = 'prj_set_strategy {}'
+                f.write(_s.format(strategy))
+                f.write('\n')
             if incdirs:
                 _s = 'prj_set_impl_opt {include path} {'
                 _s += ' '.join(incdirs)
