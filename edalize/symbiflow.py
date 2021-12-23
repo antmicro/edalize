@@ -59,32 +59,15 @@ class Symbiflow(Edatool):
                         "name" : "environment_script",
                         "type" : "String",
                         "desc" : "Optional bash script that will be sourced before each build step."
-                    },
-                    {
-                        "name" : "yosys_frontend",
-                        "type" : "String",
-                        "desc" : 'Select yosys frontend. Currently "uhdm" and "verilog" frontends are supported.'
-                    },
-                    {
-                        "name" : "library_files",
-                        "type" : "String",
-                        "desc" : "list of the library files for surelog"
-                    },
-                ],
-                'lists' : [
-                        {'name' : 'surelog_options',
-                         'type' : 'String',
-                         'desc' : 'List of options for surelog'},
-                ],
+                    }
+                ]
             }
 
             symbiflow_members = symbiflow_help["members"]
-            symbiflow_lists = symbiflow_help["lists"]
 
             return {
                 "description": "The Symbiflow backend executes Yosys sythesis tool and VPR place and route. It can target multiple different FPGA vendors",
                 "members": symbiflow_members,
-                "lists": symbiflow_lists,
             }
 
     def get_version(self):
@@ -117,27 +100,9 @@ class Symbiflow(Edatool):
                 if f.file_type in ["user"]:
                     user_files.append(f.name)
 
-        if yosys_frontend in ["uhdm"]:
-            surelog_edam = {
-                    'files'         : self.files,
-                    'name'          : self.name,
-                    'toplevel'      : self.toplevel,
-                    'parameters'    : self.parameters,
-                    'tool_options'  : {'surelog' : {
-                                            'library_files' : self.tool_options.get('library_files', []),
-                                            'surelog_options' : self.tool_options.get('surelog_options', []),
-                                            }
-                                    }
-                    }
-
-            surelog = getattr(import_module("edalize.surelog"), 'Surelog')(surelog_edam, self.work_root)
-            surelog.configure()
-            self.vlogparam.clear() # vlogparams are handled by Surelog
-            uhdm_list.append(os.path.abspath(self.work_root + '/' + self.toplevel + '.uhdm'))
-        else:
-            for f in src_files:
-                if f.file_type in ["verilogSource", "systemVerilogSource"]:
-                    file_list.append(f.name)
+        for f in src_files:
+            if f.file_type in ["verilogSource", "systemVerilogSource"]:
+                file_list.append(f.name)
 
         part = self.tool_options.get('part', None)
         package = self.tool_options.get('package', None)
@@ -176,12 +141,28 @@ class Symbiflow(Edatool):
         # This file needs to be a bash file
         environment_script = self.tool_options.get('environment_script', None)
 
-        print(uhdm_list)
+        surelog_cmd = "--disable-feature=parametersubstitution -parse -DSYNTHESIS "
+
+        pattern = len(self.vlogparam.keys()) * " -P%s=%%s"
+        verilog_params_command = pattern % tuple(self.vlogparam.keys()) % tuple(self.vlogparam.values())
+
+        verilog_defines_command = "+define" if self.vlogdefine.items() else ""
+        pattern = len(self.vlogdefine.keys()) * "+%s=%%s"
+        verilog_defines_command += pattern % tuple(self.vlogdefine.keys()) % tuple(self.vlogdefine.values())
+
+        pattern = len(incdirs) * " -I%s"
+        include_files_command = pattern % tuple(incdirs)
+
+        surelog_cmd += verilog_params_command
+        surelog_cmd += " "
+        surelog_cmd += verilog_defines_command
+        surelog_cmd += " "
+        surelog_cmd += include_files_command
 
         makefile_params = {
             "top": self.toplevel,
             "sources": " ".join(file_list),
-            "uhdm": " ".join(uhdm_list),
+            "surelog": surelog_cmd,
             "partname": partname,
             "part": part,
             "bitstream_device": bitstream_device,
