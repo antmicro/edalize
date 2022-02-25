@@ -32,8 +32,11 @@ class Trellis(Edatool):
             {'yosys' : {
                 'arch' : 'ecp5',
                 'yosys_synth_options' : self.tool_options.get('yosys_synth_options', []),
+                'yosys_read_options' : self.tool_options.get('yosys_read_options', []),
                 'yosys_as_subtool' : True,
                 'yosys_template' : self.tool_options.get('yosys_template'),
+                'surelog_options' : self.tool_options.get('surelog_options', []),
+                'sv2v_options' : self.tool_options.get('sv2v_options', [])
             },
              'nextpnr' : {
                  'nextpnr_options' : self.tool_options.get('nextpnr_options', [])
