@@ -159,12 +159,10 @@ class Yosys(Edatool):
 
         commands = self.EdaCommands()
         dep = []
-        yosys = 'yosys'
         if use_surelog:
             commands.commands += surelog.commands
             dep = [self.toplevel + ".uhdm"]
-            yosys = 'uhdm-' + yosys
-        commands.add([yosys, '-l', 'yosys.log', '-p', f'"tcl {template}"'],
+        commands.add(['yosys', '-l', 'yosys.log', '-p', f'"tcl {template}"'],
                          [f'{self.name}.{output}' for output in ['blif', 'json','edif']],
                          [template]+dep)
         if self.tool_options.get('yosys_as_subtool'):
