@@ -449,8 +449,8 @@ class Edatool(object):
             cp = run([cmd] + args,
                      cwd = self.work_root,
                      stdin=subprocess.PIPE,
-                     stdout=subprocess.PIPE,
-                     stderr=subprocess.STDOUT,
+                     stdout=self.stdout,
+                     stderr=self.stderr,
                      capture_output=capture_output,
                      check=True)
             logger.info(cp.stdout)
