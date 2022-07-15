@@ -292,11 +292,9 @@ class Edatool(object):
             logger.debug("Environment: " + str(_env))
             logger.debug("Working directory: " + self.work_root)
             try:
-                sp_output = subprocess.check_output(script['cmd'],
+                subprocess.check_call(script['cmd'],
                                       cwd = self.work_root,
-                                      env = _env,
-                                      stderr=subprocess.STDOUT)
-                logger.info(sp_output)
+                                      env = _env)
             except FileNotFoundError as e:
                 msg = "Unable to run {} script '{}': {}"
                 raise RuntimeError(msg.format(hook_name, script['name'], str(e)))
@@ -309,11 +307,9 @@ class Edatool(object):
         logger.debug("args  : " + ' '.join(args))
 
         try:
-            sp_output = subprocess.check_output([cmd] + args,
+            subprocess.check_call([cmd] + args,
                                   cwd = self.work_root,
-                                  stdin=subprocess.PIPE,
-                                  stderr=subprocess.STDOUT),
-            logger.info(sp_output)
+                                  stdin=subprocess.PIPE),
         except FileNotFoundError:
             _s = "Command '{}' not found. Make sure it is in $PATH"
             raise RuntimeError(_s.format(cmd))
