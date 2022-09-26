@@ -26,8 +26,14 @@ class Nextpnr(Edatool):
         cst_file = ""
         lpf_file = ""
         pcf_file = ""
+        xdc_file = ""
         netlist = ""
         unused_files = []
+
+        arch = self.tool_options["arch"]
+
+        is_interchange = arch == "fpga_interchange"
+
         for f in self.files:
             file_type = f.get("file_type", "")
             if file_type == "CST":
@@ -38,7 +44,7 @@ class Nextpnr(Edatool):
                         )
                     )
                 cst_file = f["name"]
-            if file_type == "LPF":
+            elif file_type == "LPF":
                 if lpf_file:
                     raise RuntimeError(
                         "Nextpnr only supports one LPF file. Found {} and {}".format(
@@ -46,7 +52,7 @@ class Nextpnr(Edatool):
                         )
                     )
                 lpf_file = f["name"]
-            if file_type == "PCF":
+            elif file_type == "PCF":
                 if pcf_file:
                     raise RuntimeError(
                         "Nextpnr only supports one PCF file. Found {} and {}".format(
@@ -54,11 +60,38 @@ class Nextpnr(Edatool):
                         )
                     )
                 pcf_file = f["name"]
+            elif file_type == "XDC":
+                if xdc_file:
+                    raise RuntimeError(
+                        "Nextpnr only supports one XDC file. Found {} and {}".format(
+                            xdc_file, f["name"]
+                        )
+                    )
             elif file_type == "jsonNetlist":
                 if netlist:
                     raise RuntimeError(
                         "Nextpnr only supports one netlist. Found {} and {}".format(
                             netlist, f["name"]
+                        )
+                    )
+                if is_interchange:
+                    raise RuntimeError(
+                        "Nextpnr-fpga_interchange requires fpga-interchange logical netlist instead of JSON, found{}".format(
+                            f["name"]
+                        )
+                    )
+                netlist = f["name"]
+            elif file_type == "fpgaInterchangeNetlist":
+                if netlist:
+                    raise RuntimeError(
+                        "Nextpnr only supports one netlist. Found {} and {}".format(
+                            netlist, f["name"]
+                        )
+                    )
+                if not is_interchange:
+                    raise RuntimeError(
+                        "Non-interchange variants of Nextpnr require JSON netlist, found{}".format(
+                            f["name"]
                         )
                     )
                 netlist = f["name"]
@@ -75,7 +108,6 @@ class Nextpnr(Edatool):
         # Write Makefile
         commands = EdaCommands()
 
-        arch = self.tool_options["arch"]
         arch_options = []
         if arch == "ecp5":
             targets = self.name + ".config"
@@ -89,6 +121,10 @@ class Nextpnr(Edatool):
             targets = self.name + ".pack"
             constraints = ["--cst", cst_file] if cst_file else []
             output = ["--write", targets]
+        elif arch == "fpga_interchange":
+            targets = self.name + ".phys"
+            constraints = ["--xdc", xdc_file]
+            output = ["--phys", targets]
         else:
             targets = self.name + ".asc"
             constraints = ["--pcf", pcf_file] if pcf_file else []
@@ -97,7 +133,12 @@ class Nextpnr(Edatool):
         depends = netlist
         command = ["nextpnr-" + arch, "-l", "next.log"]
         command += arch_options + self.tool_options.get("nextpnr_options", [])
-        command += constraints + ["--json", depends] + output
+        command += constraints
+        if is_interchange:
+            command += ["--netlist", depends]
+        else:
+            command += ["--json", depends]
+        command += output
 
         # CLI target
         commands.add(command, [targets], [depends])
