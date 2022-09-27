@@ -416,7 +416,7 @@ endif
             bitstream_device = part + "_" + device_suffix
 
         _vo = self.tool_options.get("vpr_options")
-        vpr_options = ["--additional_vpr_options", f'"{_vo}"'] if _vo else []
+        vpr_options = ["--"] + _vo if _vo else []
         pcf_opts = ["-p"] + pins_constraints if pins_constraints else []
         sdc_opts = ["-s"] + timing_constraints if timing_constraints else []
         xdc_opts = ["-x"] + placement_constraints if placement_constraints else []

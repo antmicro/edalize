@@ -16,7 +16,7 @@ def test_symbiflow_vtr(make_edalize_test):
         "package": "csg324-1",
         "vendor": "xilinx",
         "pnr": "vtr",
-        "vpr_options": "--fake_option 1000",
+        "vpr_options": ["--fake_option", "1000"]
     }
 
     files = [

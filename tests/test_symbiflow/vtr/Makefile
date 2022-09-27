@@ -10,16 +10,16 @@ top_module.eblif:
 	$(EDALIZE_LAUNCHER) symbiflow_synth -t top_module -v -d artix7 -p xc7a35tcsg324-1csg324-1 -x top.xdc
 
 top_module.net: top_module.eblif
-	$(EDALIZE_LAUNCHER) symbiflow_pack -e top_module.eblif -d xc7a35tcsg324-1_test -s top.sdc --additional_vpr_options "--fake_option 1000"
+	$(EDALIZE_LAUNCHER) symbiflow_pack -e top_module.eblif -d xc7a35tcsg324-1_test -s top.sdc -- --fake_option 1000
 
 top_module.place: top_module.net
-	$(EDALIZE_LAUNCHER) symbiflow_place -e top_module.eblif -d xc7a35tcsg324-1_test -n top_module.net -P xc7a35tcsg324-1csg324-1 -s top.sdc -p top.pcf --additional_vpr_options "--fake_option 1000"
+	$(EDALIZE_LAUNCHER) symbiflow_place -e top_module.eblif -d xc7a35tcsg324-1_test -n top_module.net -P xc7a35tcsg324-1csg324-1 -s top.sdc -p top.pcf -- --fake_option 1000
 
 top_module.route: top_module.place
-	$(EDALIZE_LAUNCHER) symbiflow_route -e top_module.eblif -d xc7a35tcsg324-1_test -s top.sdc --additional_vpr_options "--fake_option 1000"
+	$(EDALIZE_LAUNCHER) symbiflow_route -e top_module.eblif -d xc7a35tcsg324-1_test -s top.sdc -- --fake_option 1000
 
 top_module.fasm: top_module.route
-	$(EDALIZE_LAUNCHER) symbiflow_write_fasm -e top_module.eblif -d xc7a35tcsg324-1_test -s top.sdc --additional_vpr_options "--fake_option 1000"
+	$(EDALIZE_LAUNCHER) symbiflow_write_fasm -e top_module.eblif -d xc7a35tcsg324-1_test -s top.sdc -- --fake_option 1000
 
 top_module.bit: top_module.fasm
 	$(EDALIZE_LAUNCHER) symbiflow_write_bitstream -d artix7 -f top_module.fasm -p xc7a35tcsg324-1csg324-1 -b top_module.bit
