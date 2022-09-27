@@ -174,6 +174,10 @@ class Symbiflow(Edatool):
         chipdb = None
         device = None
         placement_constraints = []
+        vpr_grid = None
+        rr_graph = None
+        vpr_capnp_schema = None
+
 
         for f in src_files:
             if f.file_type in ["bba"]:
@@ -182,6 +186,12 @@ class Symbiflow(Edatool):
                 device = f.name
             elif f.file_type in ["xdc"]:
                 placement_constraints.append(f.name)
+            elif f.file_type in ["RRGraph"]:
+                rr_graph = f.name
+            elif f.file_type in ["VPRGrid"]:
+                vpr_grid = f.name
+            elif f.file_type in ['capnp']:
+                vpr_capnp_schema = f.name
             else:
                 continue
 
@@ -294,6 +304,47 @@ endif
         command = ["symbiflow_write_bitstream", "-d", bitstream_device]
         command += ["-f", depends, "-p", partname, "-b", targets]
         commands.add(command, [targets], [depends])
+
+        fasm2bels = self.tool_options.get('fasm2bels', False)
+        dbroot = self.tool_options.get('dbroot', None)
+        clocks = self.tool_options.get('clocks', None)
+        if fasm2bels:
+            if any(v is None for v in [rr_graph, vpr_grid, dbroot]):
+                logger.error("When using fasm2bels, rr_graph, vpr_grid and database root must be provided")
+            tcl_params = {
+                'top': self.toplevel,
+                'part': partname,
+                'xdc': ' '.join(placement_constraints),
+                'clocks': clocks,
+            }
+
+            self.render_template('symbiflow-fasm2bels-tcl.j2',
+                                 'fasm2bels.tcl',
+                                 tcl_params)
+            self.render_template('vivado-sh.j2',
+                                 'vivado.sh',
+                                 dict(tcl="fasm2bels"))
+
+            targets = self.toplevel+".bit.v"
+            command = ['python -m fasm2bels']
+            command += ['--db_root', dbroot+f'/{bitstream_device}']
+            command += ['--part', partname]
+            command += ['--bitread bitread']
+            command += ['--bit_file', self.toplevel+'.bit']
+            command += ['--fasm_file', self.toplevel+'.bit.fasm']
+            command += ['--connection_database channels.db']
+            command += ['--rr_graph', rr_graph]
+            command += ['--route_file', self.toplevel+".route"]
+            command += ['--vpr_grid_map', vpr_grid]
+            command += ['--vpr_capnp_schema_dir', vpr_capnp_schema]
+            command += ['--verilog_file', self.toplevel+".bit.v"]
+            command += ['--xdc_file', self.toplevel+".bit.xdc"]
+            command += ["&& rm channels.db"]
+            commands.add(command, [targets], [])
+            depends = targets
+            targets = "timing_summary.rpt"
+            command = ["bash vivado.sh"]
+            commands.add(command, [targets], [depends])
 
         commands.set_default_target(targets)
         commands.write(os.path.join(self.work_root, "Makefile"))
