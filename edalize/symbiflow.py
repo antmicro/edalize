@@ -301,8 +301,10 @@ endif
 
         depends = self.name + ".fasm"
         targets = self.name + ".bit"
-        command = ["symbiflow_write_bitstream", "-d", bitstream_device]
-        command += ["-f", depends, "-p", partname, "-b", targets]
+        db_root = f'$(shell prjxray-config)/{bitstream_device}'
+        part_file = f'{db_root}/{partname}/part.yaml'
+        command = ['xcfasm', '--db-root', db_root, '--sparse', '--emit_pudc_b_pullup']
+        command += ['--fn_in', depends, '--part', partname, '--part_file', part_file , '--bit_out', targets]
         commands.add(command, [targets], [depends])
 
         fasm2bels = self.tool_options.get('fasm2bels', False)
