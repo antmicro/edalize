@@ -35,8 +35,10 @@ class Trellis(Edatool):
                 "arch": "ecp5",
                 "output_format": "json",
                 "yosys_synth_options": self.tool_options.get("yosys_synth_options", []),
+                "yosys_read_options" : self.tool_options.get("yosys_read_options"),
                 "yosys_as_subtool": True,
                 "yosys_template": self.tool_options.get("yosys_template"),
+                "frontend_options" : self.tool_options.get("frontend_options"),
             },
             "nextpnr": {
                 "nextpnr_options": self.tool_options.get("nextpnr_options", [])

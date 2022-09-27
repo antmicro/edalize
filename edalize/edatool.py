@@ -241,6 +241,15 @@ class Edatool(object):
         self.build_main()
         self.build_post()
 
+    def check_args(self, unknown):
+        # If a tool is using subtools some of the argument may be
+        # parsed by the subtool. This function is used to check if
+        # all the provided arguments were correct. A tool can override
+        # this function to provide custom args checking logic.
+
+        if unknown:
+            raise Exception(f'Unknown command line option {unknown[0]}')
+
     def build_pre(self):
         if "pre_build" in self.hooks:
             self._run_scripts(self.hooks["pre_build"], "pre_build")
@@ -346,7 +355,9 @@ class Edatool(object):
             backend_args.add_argument("--" + _opt["name"], help=_opt["desc"])
 
         args_dict = {}
-        for key, value in vars(parser.parse_args(args)).items():
+        known, unknown = parser.parse_known_args(args)
+        self.check_args(unknown)
+        for key, value in vars(known).items():
             if value is None:
                 continue
             if type(value) == list:
@@ -433,9 +444,13 @@ class Edatool(object):
                     script["cmd"],
                     cwd=self.work_root,
                     env=_env,
+                    stdin = subprocess.PIPE,
+                    stdout = subprocess.PIPE,
+                    stderr = subprocess.STDOUT,
                     capture_output=not self.verbose,
                     check=True,
                 )
+                logger.info(cp.stdout)
             except FileNotFoundError as e:
                 msg = "Unable to run {} script '{}': {}"
                 raise RuntimeError(msg.format(hook_name, script["name"], str(e)))
@@ -471,7 +486,7 @@ class Edatool(object):
             _s = "Command '{}' not found. Make sure it is in $PATH".format(cmd)
             raise RuntimeError(_s)
         except subprocess.CalledProcessError as e:
-            _s = "'{}' exited with an error: {}".format(e.cmd, e.returncode)
+            _s = "'{}' exited with an error: {}\n{}".format(e.cmd, e.returncode, e.output.decode())
             logger.debug(_s)
 
             if e.stdout:

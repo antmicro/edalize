@@ -13,4 +13,8 @@ verilog_defaults -pop
 
 synth $top
 
-{{ write_command }} {{ output_opts -}} {{ output_name }}
+{% for command in additional_commands %}
+{{ command }}
+{% endfor %}
+
+{{ write_command }} {{ output_opts -}} $name.{{ output_format }}

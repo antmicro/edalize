@@ -55,6 +55,9 @@ class Icestorm(Edatool):
 
         self.icestorm = Icestorm2(edam, work_root, verbose)
 
+    def check_args(self, unknown):
+        Yosys.validate_args(unknown)
+
     def configure_main(self):
         self.icestorm.configure()
 

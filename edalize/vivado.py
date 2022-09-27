@@ -39,8 +39,28 @@ class Vivado(Edatool):
                         "type": "String",
                         "desc": "Board repository paths. A list of paths to search for board files.",
                     },
+                    {
+                        'name' : 'yosys_synth_options',
+                        'type' : 'String',
+                        'desc' :'Additional options for synth command'
+                    },
+                    {
+                        'name' : 'yosys_read_options',
+                        'type' : 'String',
+                        'desc' : 'Additional options for Yosys\' read command'
+                    },
+                    {
+                        'name' : 'frontend_options',
+                        'type' : 'String',
+                        'desc' : 'Additional options for the Yosys frontend'
+                    },
                 ],
                 "members": [
+                    {
+                        'name' : 'vivado-settings',
+                        'type' : 'String',
+                        'desc' : 'Path to vivado settings (e.g. /opt/Xilinx/Vivado/2017.2/settings64.sh'
+                    },
                     {
                         "name": "part",
                         "type": "String",
