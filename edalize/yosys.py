@@ -94,8 +94,10 @@ class Yosys(Edatool):
             logger.error("ERROR: arch is not defined.")
 
         use_surelog = False
+        plugins = []
         if "frontend=surelog" in yosys_synth_options:
             use_surelog = True
+            plugins += ['uhdm']
             yosys_synth_options.remove("frontend=surelog")
 
         if use_surelog:
@@ -183,6 +185,7 @@ class Yosys(Edatool):
             else "",
             "yosys_template": template,
             "name": self.name,
+            "plugins": "plugin -i %s \n"*len(plugins) % tuple(plugins),
         }
 
         self.render_template(
