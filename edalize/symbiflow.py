@@ -211,15 +211,29 @@ class Symbiflow(Edatool):
         for x in placement_constraints:
             xdcs += ["--xdc", x]
 
+        clocks = self.tool_options.get('clocks', dict())
+
         commands = EdaCommands()
         commands.commands = yosys.commands
         if arch == "fpga_interchange":
+            self.render_template('interchange-tcl.j2',
+                                 'interchange.tcl',
+                                 dict(name=self.name, clocks=clocks, part=part))
+            self.render_template('vivado-sh.j2',
+                                 'vivado.sh',
+                                 dict(tcl="interchange"))
+
+            assert len(xdcs) == 2, xdcs
+
             schema_dir = self.tool_options.get("schema_dir", None)
             if schema_dir is None:
                 commands.header += """ifndef INTERCHANGE_SCHEMA_PATH
 $(error Environment variable INTERCHANGE_SCHEMA_PATH was not found. It should be set to <fpga-interchange-schema path>/interchange)
 endif
-
+"""
+            commands.header += """ifndef RAPIDWRIGHT_PATH
+$(error Environment variable RAPIDWRIGHT_PATH was not found. It should be set to <rapid wright path>)
+endif
 """
             targets = self.name + ".netlist"
             command = ["python", "-m", "fpga_interchange.yosys_json"]
@@ -252,6 +266,17 @@ endif
                 depends,
                 targets,
             ]
+            commands.add(command, [targets], [depends])
+
+            depends = self.name+'.fasm'
+            targets = self.name+'.dcp'
+            command = ['RAPIDWRIGHT_PATH=${RAPIDWRIGHT_PATH} ${RAPIDWRIGHT_PATH}/scripts/invoke_rapidwright.sh com.xilinx.rapidwright.interchange.PhysicalNetlistToDcp']
+            command += [self.name+'.netlist', self.name+'.phys', xdcs[1], self.name+'.dcp',]
+            commands.add(command, [targets], [depends])
+
+            depends = self.name+'.dcp'
+            targets = self.name+'.timing'
+            command = ["bash vivado.sh"]
             commands.add(command, [targets], [depends])
         else:
             targets = self.name + ".fasm"
@@ -385,7 +410,7 @@ endif
                                  tcl_params)
             self.render_template('vivado-sh.j2',
                                  'vivado.sh',
-                                 dict())
+                                 dict(tcl="fasm2bels"))
 
         seed = self.tool_options.get('seed', None)
 

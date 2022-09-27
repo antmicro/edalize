@@ -34,6 +34,7 @@ setup(
             "templates/ascentlint/Makefile.j2",
             "templates/ascentlint/run-ascentlint.tcl.j2",
             "templates/symbiflow/symbiflow-fasm2bels-tcl.j2",
+            "templates/symbiflow/interchange-tcl.j2",
             "templates/symbiflow/vivado-sh.j2",
             "templates/libero/libero-project.tcl.j2",
             "templates/libero/libero-run.tcl.j2",

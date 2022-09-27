@@ -1,0 +1,9 @@
+open_checkpoint {{ name }}.dcp
+
+{% if clocks %}
+    {% for key, value in clocks.items() %}
+create_clock -period {{ value }} [get_ports {{ key }}]
+    {% endfor %}
+{% endif %}
+
+report_timing_summary -datasheet -max_paths 10 -file {{ name }}.timing
