@@ -19,4 +19,6 @@ synth $top
 {{ command }}
 {% endfor %}
 
-{{ write_command }} {{ output_opts -}} $name.{{ output_format }}
+write_blif $name.blif
+write_json $name.json
+write_edif {{ edif_opts }} $name.edif

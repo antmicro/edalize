@@ -32,6 +32,16 @@ class Nextpnr(Edatool):
         qsf_file = ""
         netlist = ""
         unused_files = []
+
+        arch = self.flow_config["arch"]
+        is_interchange = arch == "fpga_interchange"
+        chipdb = self.tool_options.get("chipdb")
+        if is_interchange and (chipdb is None):
+            raise RuntimeError(
+                "Nextpnr-fpga_interchange require chipdb to be specified."
+            )
+        package = self.tool_options.get("package")
+
         for f in self.files:
             if f["file_type"] == "CST":
                 if cst_file:
