@@ -99,7 +99,6 @@ class Nextpnr(Edatool):
                             netlist, f["name"]
                         )
                     )
-                netlist = f["name"]
                 if is_interchange:
                     raise RuntimeError(
                         "Nextpnr-fpga_interchange requires fpga-interchange logical netlist instead of JSON, found{}".format(
@@ -120,6 +119,7 @@ class Nextpnr(Edatool):
                             f["name"]
                         )
                     )
+                netlist = f["name"]
             else:
                 unused_files.append(f)
 
