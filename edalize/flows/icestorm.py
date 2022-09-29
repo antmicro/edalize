@@ -88,9 +88,10 @@ class Icestorm(Edaflow):
         super().configure_tools(nodes)
 
         name = self.edam["name"]
+
         # Slot in statistics command which doesn't have an EdaTool class
         depends = name + ".asc"
         targets = name + ".stat"
-        command = ["icebox_stat", depends, targets]
+        command = ["icebox_stat", depends, ">"+targets]
         self.commands.add(command, [targets], [depends])
         self.commands.add([], ["stats"], [targets])
