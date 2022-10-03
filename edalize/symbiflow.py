@@ -31,7 +31,7 @@ class Symbiflow(Edatool):
 
     argtypes = ["vlogdefine", "vlogparam", "generic"]
     archs = ["xilinx", "fpga_interchange"]
-    fpga_interchange_families = ["xc7"]
+    fpga_interchange_families = ["xc7", "nexus"]
 
     @classmethod
     def get_doc(cls, api_ver):
@@ -126,7 +126,7 @@ class Symbiflow(Edatool):
             "parameters": self.parameters,
             "tool_options": {
                 "yosys": {
-                    "arch": vendor,
+                    "arch": vendor if vendor != "lattice-nexus" else "nexus",
                     "output_format": "json",
                     "yosys_synth_options": yosys_synth_options,
                     "yosys_additional_commands" : yosys_additional_commands,
@@ -215,6 +215,8 @@ class Symbiflow(Edatool):
             bitstream_device = "zynq7"
         if "xc7k" in part:
             bitstream_device = "kintex7"
+        if "LIFCL" in part:
+            bitstream_device = "nexus"
 
         depends = self.name + ".json"
         xdcs = []

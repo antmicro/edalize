@@ -25,7 +25,7 @@ class Yosys(Edatool):
                     {
                         "name": "arch",
                         "type": "String",
-                        "desc": "Target architecture. Legal values are *xilinx*, *ice40* and *ecp5*",
+                        "desc": "Target architecture. Legal values are *nexus*, *xilinx*, *ice40* and *ecp5*",
                     },
                     {
                         "name": "output_format",
