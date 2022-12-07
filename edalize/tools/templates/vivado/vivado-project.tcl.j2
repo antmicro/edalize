@@ -78,5 +78,5 @@ generate_target all [get_ips -filter {SCOPE !~ "*.bd"}]
 {%- endif %}
 
 {% if netlist_flow -%}
-link_design -top {{ name }} -part {{ tool_options.part }}
+link_design -top {{ toplevel }} -part {{ tool_options.part }}
 {%- endif %}
