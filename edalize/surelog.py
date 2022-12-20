@@ -3,6 +3,7 @@ import os.path
 import subprocess
 
 from edalize.edatool import Edatool
+from edalize.utils import EdaCommands
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +72,7 @@ class Surelog(Edatool):
         pattern = len(incdirs) * " -I%s"
         include_files_command = pattern % tuple(incdirs)
 
-        commands = self.EdaCommands()
+        commands = EdaCommands()
         depends = ''
         target = self.toplevel+'_build'
         command = ['surelog', ' '.join(surelog_options), '-parse',
