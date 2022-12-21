@@ -126,6 +126,8 @@ class Yosys(Edatool):
             yosys_commands = []
             for f in self.edam['files']:
                 # check if Verilog or SystemVerilog
+                if 'file_type' not in f:
+                    continue
                 if f['file_type'].find('erilogSource') > 0:
                     file_table.append('read_systemverilog -defer {' + f['name'] + '}')
                 else:
