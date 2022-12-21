@@ -90,6 +90,7 @@ class Yosys(Edatool):
         plugins = []
 
         self.edam['files'] = [] if not 'files' in self.edam else self.edam['files']
+        file_table = []
 
         if "frontend=surelog" in yosys_synth_options:
             self.edam['tool_options'].update({'surelog' : {
@@ -120,9 +121,21 @@ class Yosys(Edatool):
             self.edam['files'] = sv2v.edam['files']
             commands.commands += sv2v.commands
             additional_deps = [self.name+".sv2v"]
+        else:
+            unused_files = []
+            yosys_commands = []
+            for f in self.edam['files']:
+                # check if Verilog or SystemVerilog
+                if f['file_type'].find('erilogSource') > 0:
+                    file_table.append('read_systemverilog -defer {' + f['name'] + '}')
+                else:
+                    unused_files.append(f)
+            if file_table:
+                file_table.append('read_systemverilog -link')
+            plugins += ['systemverilog']
+            self.edam['files'] = unused_files[:]
 
         incdirs = []
-        file_table = []
         unused_files = []
 
         for f in self.edam['files']:
