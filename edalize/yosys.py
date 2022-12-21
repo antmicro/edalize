@@ -73,92 +73,29 @@ class Yosys(Edatool):
 
             return options
 
-    def configure_main(self):
-        # write Yosys tcl script file
+    def _configure_readsystemverilog(self):
+        unused_files = []
+        file_table = []
+        for f in self.edam['files']:
+            # check if Verilog or SystemVerilog
+            if 'file_type' not in f:
+                continue
+            if f['file_type'].find('erilogSource') > 0:
+                file_table.append('read_systemverilog -defer {' + f['name'] + '}')
+            else:
+                unused_files.append(f)
+        if file_table:
+            file_table.append('read_systemverilog -link')
+        self.edam['files'] = unused_files[:]
+        return file_table
 
-        yosys_template = self.tool_options.get('yosys_template')
-        yosys_read_options = " ".join(self.tool_options.get('yosys_read_options', []))
-
+    def gen_script(self, file_table, incdirs, plugins, commands):
         arch = self.tool_options.get('arch', None)
         if not arch:
             logger.error("ERROR: arch is not defined.")
-
-        yosys_synth_options = self.tool_options.get('yosys_synth_options', [])
-
-        commands = EdaCommands()
-        additional_deps = []
-        plugins = []
-
-        self.edam['files'] = [] if not 'files' in self.edam else self.edam['files']
-        file_table = []
-
-        if "frontend=surelog" in yosys_synth_options:
-            self.edam['tool_options'].update({'surelog' : {
-                    'arch' : arch,
-                    'surelog_options' : self.tool_options.get('surelog_options', []),
-                    'library_files' : self.tool_options.get('library_files', []),
-                    'surelog_as_subtool' : True,
-                    }
-                })
-            yosys_synth_options.remove("frontend=surelog")
-            surelog = Surelog(self.edam, self.work_root)
-            surelog.configure()
-            self.vlogparam.clear() # vlogparams are handled by Surelog
-            self.vlogdefine.clear() # vlogdefines are handled by Surelog
-            commands.commands += surelog.commands
-            additional_deps = [self.toplevel + '.uhdm']
-            self.edam['files'] = surelog.edam['files']
-            plugins += ['uhdm']
-        elif "frontend=sv2v" in yosys_synth_options:
-            self.edam['tool_options'].update({'sv2v' : {
-                        'sv2v_options' : self.tool_options.get('sv2v_options', []),
-                        'sv2v_as_subtool' : True
-                        }
-                    })
-            yosys_synth_options.remove("frontend=sv2v")
-            sv2v = Sv2v(self.edam, self.work_root)
-            sv2v.configure()
-            self.edam['files'] = sv2v.edam['files']
-            commands.commands += sv2v.commands
-            additional_deps = [self.name+".sv2v"]
-        else:
-            unused_files = []
-            yosys_commands = []
-            for f in self.edam['files']:
-                # check if Verilog or SystemVerilog
-                if 'file_type' not in f:
-                    continue
-                if f['file_type'].find('erilogSource') > 0:
-                    file_table.append('read_systemverilog -defer {' + f['name'] + '}')
-                else:
-                    unused_files.append(f)
-            if file_table:
-                file_table.append('read_systemverilog -link')
-            plugins += ['systemverilog']
-            self.edam['files'] = unused_files[:]
-
-        incdirs = []
-        unused_files = []
-
-        for f in self.edam['files']:
-            cmd = ""
-            if f["file_type"].startswith("verilogSource"):
-                cmd = "read_verilog"
-            elif f["file_type"].startswith("systemVerilogSource"):
-                cmd = "read_verilog -sv"
-            elif f["file_type"] == "tclSource":
-                cmd = "source"
-            elif f["file_type"] == "uhdm":
-                cmd = "read_uhdm"
-
-            if cmd:
-                if not self._add_include_dir(f, incdirs):
-                    file_table.append(cmd + yosys_read_options + " {" + f["name"] + "}")
-            else:
-                unused_files.append(f)
-                print(f"Skipping file without file_type: {f}")
-
-        self.edam["files"] = unused_files
+        #todo simplify
+        yosys_template = self.tool_options.get('yosys_template')
+        template = yosys_template or "edalize_yosys_template.tcl"
 
         output_format = self.tool_options.get("output_format", "blif")
         default_target = self.tool_options.get(
@@ -187,9 +124,6 @@ class Yosys(Edatool):
                 _s.format(key, self._param_value_str(value), self.toplevel)
             )
 
-        output_format = self.tool_options.get('output_format', 'blif')
-
-        template = yosys_template or "edalize_yosys_template.tcl"
         template_vars = {
             "verilog_defines": "{" + " ".join(verilog_defines) + "}",
             "verilog_params": "\n".join(verilog_params),
@@ -225,3 +159,77 @@ class Yosys(Edatool):
         else:
             commands.set_default_target(f"{self.name}.{output_format}")
             commands.write(os.path.join(self.work_root, "Makefile"))
+
+    def configure_main(self):
+        # write Yosys tcl script file
+
+        yosys_synth_options = self.tool_options.get('yosys_synth_options', [])
+
+        commands = EdaCommands()
+        additional_deps = []
+        plugins = []
+
+        self.edam['files'] = [] if not 'files' in self.edam else self.edam['files']
+        file_table = []
+
+        if "frontend=surelog" in yosys_synth_options:
+            arch = self.tool_options.get('arch', None)
+            if not arch:
+                logger.error("ERROR: arch is not defined.")
+
+            self.edam['tool_options'].update({'surelog' : {
+                    'arch' : arch,
+                    'surelog_options' : self.tool_options.get('surelog_options', []),
+                    'library_files' : self.tool_options.get('library_files', []),
+                    'surelog_as_subtool' : True,
+                    }
+                })
+            yosys_synth_options.remove("frontend=surelog")
+            surelog = Surelog(self.edam, self.work_root)
+            surelog.configure()
+            self.vlogparam.clear() # vlogparams are handled by Surelog
+            self.vlogdefine.clear() # vlogdefines are handled by Surelog
+            commands.commands += surelog.commands
+            additional_deps = [self.toplevel + '.uhdm']
+            self.edam['files'] = surelog.edam['files']
+            plugins += ['uhdm']
+        elif "frontend=sv2v" in yosys_synth_options:
+            self.edam['tool_options'].update({'sv2v' : {
+                        'sv2v_options' : self.tool_options.get('sv2v_options', []),
+                        'sv2v_as_subtool' : True
+                        }
+                    })
+            yosys_synth_options.remove("frontend=sv2v")
+            sv2v = Sv2v(self.edam, self.work_root)
+            sv2v.configure()
+            self.edam['files'] = sv2v.edam['files']
+            commands.commands += sv2v.commands
+            additional_deps = [self.name+".sv2v"]
+        else:
+            file_table = self._configure_readsystemverilog()
+            plugins += ['systemverilog']
+
+        incdirs = []
+        unused_files = []
+        yosys_read_options = " ".join(self.tool_options.get('yosys_read_options', []))
+
+        for f in self.edam['files']:
+            cmd = ""
+            if f["file_type"].startswith("verilogSource"):
+                cmd = "read_verilog"
+            elif f["file_type"].startswith("systemVerilogSource"):
+                cmd = "read_verilog -sv"
+            elif f["file_type"] == "tclSource":
+                cmd = "source"
+            elif f["file_type"] == "uhdm":
+                cmd = "read_uhdm"
+
+            if cmd:
+                if not self._add_include_dir(f, incdirs):
+                    file_table.append(cmd + yosys_read_options + " {" + f["name"] + "}")
+            else:
+                unused_files.append(f)
+                print(f"Skipping file without file_type: {f}")
+
+        self.edam["files"] = unused_files
+        self.gen_script(file_table, incdirs, plugins, commands)
