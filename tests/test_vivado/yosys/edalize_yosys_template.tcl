@@ -1,5 +1,4 @@
 yosys -import
-
 source edalize_yosys_procs.tcl
 load_plugins
 yosys -import

@@ -6,13 +6,6 @@ from .edalize_common import make_edalize_test
 def run_gatemate_test(tf):
     tf.backend.configure()
 
-    tf.compare_files(
-        ["Makefile", "edalize_yosys_procs.tcl", "edalize_yosys_template.tcl"]
-    )
-
-    tf.backend.build()
-    tf.compare_files(["yosys.cmd", "p_r.cmd"])
-
 
 def test_gatemate(make_edalize_test):
     tool_options = {

@@ -475,7 +475,7 @@ class Edatool(object):
             logger.debug(_s)
 
             if e.stdout:
-                logger.info(e.stdout.decode("utf-8", "replace"))
+                logger.info(e.stdout.decode())
             if e.stderr:
                 logger.error(e.stderr.decode())
                 logger.debug("=== STDERR ===")

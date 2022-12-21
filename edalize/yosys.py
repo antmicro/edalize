@@ -7,8 +7,6 @@ import os.path
 
 from edalize.edatool import Edatool
 from edalize.utils import EdaCommands
-from edalize.surelog import Surelog
-from edalize.sv2v import Sv2v
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +18,7 @@ class Yosys(Edatool):
     @classmethod
     def get_doc(cls, api_ver):
         if api_ver == 0:
-            options = {
+            return {
                 "description": "Open source synthesis tool targeting many different FPGAs",
                 "members": [
                     {
@@ -56,11 +54,6 @@ class Yosys(Edatool):
                 ],
                 "lists": [
                     {
-                        'name' : 'yosys_read_options',
-                        'type' : 'String',
-                        'desc' : 'Addtional options for the read_* command (e.g. read_verlog or read_uhdm)'
-                    },
-                    {
                         "name": "yosys_synth_options",
                         "type": "String",
                         "desc": "Additional options for the synth command",
@@ -68,82 +61,86 @@ class Yosys(Edatool):
                 ],
             }
 
-            Edatool._extend_options(options, Surelog)
-            Edatool._extend_options(options, Sv2v)
-
-            return options
-
-    def configure_main(self):
-        # write Yosys tcl script file
-
-        yosys_template = self.tool_options.get('yosys_template')
-        yosys_read_options = " ".join(self.tool_options.get('yosys_read_options', []))
-
-        arch = self.tool_options.get('arch', None)
-        if not arch:
-            logger.error("ERROR: arch is not defined.")
-
-        yosys_synth_options = self.tool_options.get('yosys_synth_options', [])
-
-        commands = EdaCommands()
-        additional_deps = []
-        plugins = []
-
-        self.edam['files'] = [] if not 'files' in self.edam else self.edam['files']
-
-        if "frontend=surelog" in yosys_synth_options:
-            self.edam['tool_options'].update({'surelog' : {
-                    'arch' : arch,
-                    'surelog_options' : self.tool_options.get('surelog_options', []),
-                    'library_files' : self.tool_options.get('library_files', []),
-                    'surelog_as_subtool' : True,
-                    }
-                })
-            yosys_synth_options.remove("frontend=surelog")
-            surelog = Surelog(self.edam, self.work_root)
-            surelog.configure()
-            self.vlogparam.clear() # vlogparams are handled by Surelog
-            self.vlogdefine.clear() # vlogdefines are handled by Surelog
-            commands.commands += surelog.commands
-            additional_deps = [self.toplevel + '.uhdm']
-            self.edam['files'] = surelog.edam['files']
-            plugins += ['uhdm']
-        elif "frontend=sv2v" in yosys_synth_options:
-            self.edam['tool_options'].update({'sv2v' : {
-                        'sv2v_options' : self.tool_options.get('sv2v_options', []),
-                        'sv2v_as_subtool' : True
-                        }
-                    })
-            yosys_synth_options.remove("frontend=sv2v")
-            sv2v = Sv2v(self.edam, self.work_root)
-            sv2v.configure()
-            self.edam['files'] = sv2v.edam['files']
-            commands.commands += sv2v.commands
-            additional_deps = [self.name+".sv2v"]
-
-        incdirs = []
-        file_table = []
+    def _configure_readsystemverilog(self):
+        """returns a list of Yosys commands to process Verilog and SystemVerilog sources"""
         unused_files = []
-
-        for f in self.edam['files']:
-            cmd = ""
-            if f["file_type"].startswith("verilogSource"):
-                cmd = "read_verilog"
-            elif f["file_type"].startswith("systemVerilogSource"):
-                cmd = "read_verilog -sv"
-            elif f["file_type"] == "tclSource":
-                cmd = "source"
-            elif f["file_type"] == "uhdm":
-                cmd = "read_uhdm"
-
-            if cmd:
-                if not self._add_include_dir(f, incdirs):
-                    file_table.append(cmd + yosys_read_options + " {" + f["name"] + "}")
+        file_table = []
+        includes = set()
+        for f in self.edam["files"]:
+            # check if Verilog or SystemVerilog
+            if "file_type" not in f:
+                continue
+            if "is_include_file" in f:
+                includes.add(os.path.dirname(f["name"]))
+            if f["file_type"].find("erilogSource") > 0:
+                file_table.append(f["name"])
             else:
                 unused_files.append(f)
-                print(f"Skipping file without file_type: {f}")
 
-        self.edam["files"] = unused_files
+        # we assume that every directory that contains sources can also contain include files
+        #   as the include files are not always properly marked in the core files.
+        includes |= {os.path.dirname(f) for f in file_table}
+        file_table = [f for f in file_table if not f.endswith(".svh")]
+        self.edam["files"] = unused_files[:]
+
+        # Read all files in one command.
+        # Prepend with flags for includes
+        include_str = ""
+        if includes:
+            include_str = "-I" + " -I".join(set(includes)) + " "
+
+        read_command = ""
+        if file_table:
+            read_command = "read_systemverilog " + include_str + " ".join(file_table)
+
+        return read_command
+
+    def gen_script_nosynth(self, read_command, plugins):
+        """Generates a TCL script for Yosys to parse SystemVerilog files without synthesis"""
+        commands = EdaCommands()
+        targets = []
+
+        # TODO use verilog_defines
+        verilog_defines = []
+        for key, value in self.vlogdefine.items():
+            verilog_defines.append("{{{key} {value}}}".format(key=key, value=value))
+
+        # TODO use verilog_params
+        verilog_params = []
+        for key, value in self.vlogparam.items():
+            if type(value) is str:
+                value = '{"' + value + '"}'
+            verilog_params.append(f"-P{key}={self._param_value_str(value)}")
+        rtlil = self.toplevel + ".rtlil"
+
+        template_vars = {
+            "file_table": read_command,
+            "top": self.toplevel,
+            "name": self.name,
+            "plugins": "plugin -i %s \n" * len(plugins) % tuple(plugins),
+            "write_command": "write_rtlil " + rtlil,
+        }
+        tcl_script = "yosys_nosynth.tcl"
+        self.render_template("yosys_nosynth.tcl.j2", tcl_script, template_vars)
+        commands.add(
+            ["yosys", "-l", "yosys.log", "-p", f"'tcl {tcl_script}'"],
+            [rtlil],
+            [],
+            [tcl_script],
+        )
+        targets.append(rtlil)
+        commands.add([], ["rtlil"], [], targets)
+        commands.set_default_target("rtlil")
+        commands.write(os.path.join(self.work_root, "Makefile"))
+        self.commands = commands.commands
+
+    def gen_script(self, file_table, incdirs, plugins, commands):
+        arch = self.tool_options.get("arch", None)
+        if not arch:
+            logger.error("ERROR: arch is not defined.")
+        # todo simplify
+        yosys_template = self.tool_options.get("yosys_template")
+        template = yosys_template or "edalize_yosys_template.tcl"
 
         output_format = self.tool_options.get("output_format", "blif")
         default_target = self.tool_options.get(
@@ -172,9 +169,6 @@ class Yosys(Edatool):
                 _s.format(key, self._param_value_str(value), self.toplevel)
             )
 
-        output_format = self.tool_options.get('output_format', 'blif')
-
-        template = yosys_template or "edalize_yosys_template.tcl"
         template_vars = {
             "verilog_defines": "{" + " ".join(verilog_defines) + "}",
             "verilog_params": "\n".join(verilog_params),
@@ -188,7 +182,7 @@ class Yosys(Edatool):
             "output_opts": "-pvector bra " if arch == "xilinx" else "",
             "yosys_template": template,
             "name": self.name,
-            'plugins': "plugin -i %s \n"*len(plugins) % tuple(plugins)
+            "plugins": "plugin -i %s \n" * len(plugins) % tuple(plugins),
         }
 
         self.render_template(
@@ -210,3 +204,14 @@ class Yosys(Edatool):
         else:
             commands.set_default_target(f"{self.name}.{output_format}")
             commands.write(os.path.join(self.work_root, "Makefile"))
+
+    def configure_main(self):
+        # write Yosys tcl script file
+
+        plugins = ["systemverilog"]
+
+        self.edam["files"] = [] if not "files" in self.edam else self.edam["files"]
+
+        read_command = self._configure_readsystemverilog()
+
+        self.gen_script_nosynth(read_command, plugins)

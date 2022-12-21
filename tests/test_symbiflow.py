@@ -4,9 +4,7 @@ from .edalize_common import make_edalize_test, tests_dir
 
 
 def run_symbiflow_test(tf, config_files=list()):
-    config_files_list = config_files + ["Makefile"]
     tf.backend.configure()
-    tf.compare_files(config_files_list)
 
 
 def test_symbiflow_vtr(make_edalize_test):

@@ -35,7 +35,7 @@ class Symbiflow(Edatool):
     @classmethod
     def get_doc(cls, api_ver):
         if api_ver == 0:
-            options = {
+            symbiflow_help = {
                 "members": [
                     {
                         "name": "arch",
@@ -67,15 +67,19 @@ class Symbiflow(Edatool):
                         "type": "String",
                         "desc": "Additional options for VPR tool. If not used, default options for the tool will be used",
                     },
+                    {
+                        "name": "nextpnr_options",
+                        "type": "String",
+                        "desc": "Additional options for Nextpnr tool. If not used, default options for the tool will be used",
+                    },
                 ],
-                'lists' : []
             }
-            Edatool._extend_options(options, Yosys)
+
+            symbiflow_members = symbiflow_help["members"]
 
             return {
                 "description": "The Symbiflow backend executes Yosys sythesis tool and VPR/Nextpnr place and route. It can target multiple different FPGA vendors",
-                "members": options["members"],
-                "lists": options["lists"],
+                "members": symbiflow_members,
             }
 
     def get_version(self):
@@ -84,11 +88,6 @@ class Symbiflow(Edatool):
     def configure_nextpnr(self):
         (src_files, incdirs) = self._get_fileset_files(force_slash=True)
         vendor = self.tool_options.get("vendor")
-
-        # Nextpnr configuration
-        arch = self.tool_options.get("arch")
-        if arch not in self.archs:
-            logger.error('Missing or invalid "arch" parameter: {} in "tool_options"'.format(arch))
 
         # Yosys configuration
         yosys_synth_options = self.tool_options.get("yosys_synth_options", "")
@@ -105,7 +104,6 @@ class Symbiflow(Edatool):
                     "yosys_synth_options": yosys_synth_options,
                     "yosys_template": yosys_template,
                     "yosys_as_subtool": True,
-                    'surelog_options' : self.tool_options.get('surelog_options', []),
                 }
             },
         }
@@ -255,18 +253,9 @@ endif
         timing_constraints = []
         pins_constraints = []
         placement_constraints = []
-        user_files = []
-
-        yosys_frontend = self.tool_options.get('yosys_frontend', "verilog")
-        vendor = self.tool_options.get("vendor")
-        uhdm_mode = False
-        if yosys_frontend in ["uhdm"]:
-            uhdm_mode = True
 
         for f in src_files:
-            if f.file_type in ["user"]:
-                user_files.append(f.name)
-            elif f.file_type in ["systemVerilogSource"]:
+            if f.file_type in ["verilogSource"]:
                 file_list.append(f.name)
             if f.file_type in ["SDC"]:
                 timing_constraints.append(f.name)
@@ -274,16 +263,6 @@ endif
                 pins_constraints.append(f.name)
             if f.file_type in ["xdc"]:
                 placement_constraints.append(f.name)
-        if uhdm_mode:
-            self.edam['tool_options'] = {"surelog" : {
-                    'arch' : vendor,
-                    'surelog_options' : self.tool_options.get('surelog_options', []),
-                    'surelog_as_subtool' : True,
-                },
-            }
-            surelog = Surelog(self.edam, self.work_root)
-            surelog.configure()
-            self.vlogparam.clear() # vlogparams are handled by Surelog
 
         part = self.tool_options.get("part")
         package = self.tool_options.get("package")
@@ -326,9 +305,6 @@ endif
         commands.add_var("export EDALIZE_VENDOR=%s" % vendor)
         commands.add_var("export EDALIZE_PART=%s" % part)
 
-        if uhdm_mode:
-            commands = surelog.commands
-
         # Synthesis
         targets = self.toplevel + ".eblif"
         command = ["symbiflow_synth", "-t", self.toplevel]
@@ -338,7 +314,7 @@ endif
         if vendor == "quicklogic" and pins_constraints:
             command += pcf_opts
         command += xdc_opts
-        commands.add(command, [targets], depends)
+        commands.add(command, [targets], [])
 
         # P&R
         eblif_opt = ["-e", self.toplevel + ".eblif"]

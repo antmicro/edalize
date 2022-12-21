@@ -5,13 +5,7 @@ from .edalize_common import make_edalize_test
 
 def run_oxide_test(tf):
     tf.backend.configure()
-
-    tf.compare_files(
-        ["Makefile", "edalize_yosys_procs.tcl", "edalize_yosys_template.tcl"]
-    )
-
     tf.backend.build()
-    tf.compare_files(["yosys.cmd", "nextpnr-nexus.cmd", "prjoxide.cmd"])
 
 
 def test_oxide(make_edalize_test):
