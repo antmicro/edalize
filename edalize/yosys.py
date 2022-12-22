@@ -74,6 +74,7 @@ class Yosys(Edatool):
             return options
 
     def _configure_readsystemverilog(self):
+        '''returns a list of Yosys commands to process Verilog and SystemVerilog sources'''
         unused_files = []
         file_table = []
         for f in self.edam['files']:
@@ -172,6 +173,9 @@ class Yosys(Edatool):
         self.edam['files'] = [] if not 'files' in self.edam else self.edam['files']
         file_table = []
 
+        if True: #TODO
+            self.generate_separate_tests()
+
         if "frontend=surelog" in yosys_synth_options:
             arch = self.tool_options.get('arch', None)
             if not arch:
@@ -224,12 +228,48 @@ class Yosys(Edatool):
             elif f["file_type"] == "uhdm":
                 cmd = "read_uhdm"
 
-            if cmd:
-                if not self._add_include_dir(f, incdirs):
-                    file_table.append(cmd + yosys_read_options + " {" + f["name"] + "}")
+            if cmd and not self._add_include_dir(f, incdirs):
+                file_table.append(cmd + yosys_read_options + " {" + f["name"] + "}")
             else:
                 unused_files.append(f)
                 print(f"Skipping file without file_type: {f}")
 
         self.edam["files"] = unused_files
         self.gen_script(file_table, incdirs, plugins, commands)
+
+    def generate_separate_tests(self):
+        # iterate over Verilog or SystemVerilog sources
+        for f in self.edam['files'] if ('file_type' in f and f['file_type'].find('erilogSource')):
+            fname = f['name']
+            script_name = 
+
+            verilog_defines = []
+            for key, value in self.vlogdefine.items():
+                verilog_defines.append("{{{key} {value}}}".format(key=key, value=value))
+
+            verilog_params = []
+            for key, value in self.vlogparam.items():
+                if type(value) is str:
+                    value = '{"' + value + '"}'
+                verilog_params.append(
+                    r"chparam -set {} {} {}".format(key, self._param_value_str(value), self.toplevel)
+                )
+            file_table = ['read_systemverilog -defer {' + f['name'] + '}']
+            # TODO add include dirs?
+            arch = self.tool_options.get('arch', None)
+            if not arch:
+                logger.error("ERROR: arch is not defined.")
+
+            template_vars = {
+                "verilog_defines": "{" + " ".join(verilog_defines) + "}",
+                "verilog_params": "\n".join(verilog_params),
+                "file_table": "\n".join(file_table),
+                "incdirs": "",
+                "top": self.toplevel,
+                "yosys_template": template,
+                "name": self.name,
+                'plugins': "plugin -i %s \n"*len(plugins) % tuple(plugins)
+            }
+            self.render_template(
+                "yosys_separate_tests.tcl.j2", script_name, template_vars
+            )
