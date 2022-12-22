@@ -239,12 +239,10 @@ class Yosys(Edatool):
         self.gen_script(file_table, incdirs, plugins, commands)
 
     def generate_separate_tests(self):
-        default_target = self.tool_options.get(
-            "output_name", f"{self.name}.{output_format}"
-        )
-
+        commands = EdaCommands()
         # iterate over Verilog or SystemVerilog sources
         filelist = (f for f in self.edam['files'] if 'file_type' in f and f['file_type'].find('erilogSource') > 0)
+        targets = []
         for f in filelist:
             fname = f['name']
 
@@ -265,7 +263,7 @@ class Yosys(Edatool):
             if not arch:
                 logger.error("ERROR: arch is not defined.")
             plugins = ['systemverilog']
-
+            rtlil = f['name'] + ".rtlil"
             template_vars = {
                 "verilog_defines": "{" + " ".join(verilog_defines) + "}",
                 "verilog_params": "\n".join(verilog_params),
@@ -273,16 +271,20 @@ class Yosys(Edatool):
                 "incdirs": "",
                 "top": self.toplevel,
                 "name": self.name,
-                'plugins': "plugin -i %s \n"*len(plugins) % tuple(plugins)
+                'plugins': "plugin -i %s \n"*len(plugins) % tuple(plugins),
+                "write_command": "write_rtlil " + rtlil,
             }
-            tcl_script = f['name'] + '.tcl'
+            tcl_script = os.path.basename(f['name']) + '.tcl'
             self.render_template(
                 "yosys_separate_tests.tcl.j2", tcl_script, template_vars
             )
             commands.add(
                 ["yosys", "-l", "yosys.log", "-p", f"'tcl {tcl_script}'"],
-                [default_target],
+                [rtlil],
+                [],
                 [tcl_script],
-        )
-        commands.set_default_target(f"{self.name}")
+            )
+            targets.append(rtlil)
+        commands.add([], ["rtlil"], [], targets)
+        commands.set_default_target("rtlil")
         commands.write(os.path.join(self.work_root, "Makefile"))

@@ -249,7 +249,7 @@ class Edatool(object):
         logger.info(
             "Building{}".format("" if target is None else "target " + " ".join(target))
         )
-        self._run_tool("make", [] if target is None else [target], quiet=True)
+        self._run_tool("make", ['-k'] + [] if target is None else [target], quiet=True)
 
     def build_post(self):
         if "post_build" in self.hooks:
