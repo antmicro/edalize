@@ -175,6 +175,7 @@ class Yosys(Edatool):
 
         if True: #TODO
             self.generate_separate_tests()
+            return
 
         if "frontend=surelog" in yosys_synth_options:
             arch = self.tool_options.get('arch', None)
@@ -238,10 +239,14 @@ class Yosys(Edatool):
         self.gen_script(file_table, incdirs, plugins, commands)
 
     def generate_separate_tests(self):
+        default_target = self.tool_options.get(
+            "output_name", f"{self.name}.{output_format}"
+        )
+
         # iterate over Verilog or SystemVerilog sources
-        for f in self.edam['files'] if ('file_type' in f and f['file_type'].find('erilogSource')):
+        filelist = (f for f in self.edam['files'] if 'file_type' in f and f['file_type'].find('erilogSource') > 0)
+        for f in filelist:
             fname = f['name']
-            script_name = 
 
             verilog_defines = []
             for key, value in self.vlogdefine.items():
@@ -259,6 +264,7 @@ class Yosys(Edatool):
             arch = self.tool_options.get('arch', None)
             if not arch:
                 logger.error("ERROR: arch is not defined.")
+            plugins = ['systemverilog']
 
             template_vars = {
                 "verilog_defines": "{" + " ".join(verilog_defines) + "}",
@@ -266,10 +272,17 @@ class Yosys(Edatool):
                 "file_table": "\n".join(file_table),
                 "incdirs": "",
                 "top": self.toplevel,
-                "yosys_template": template,
                 "name": self.name,
                 'plugins': "plugin -i %s \n"*len(plugins) % tuple(plugins)
             }
+            tcl_script = f['name'] + '.tcl'
             self.render_template(
-                "yosys_separate_tests.tcl.j2", script_name, template_vars
+                "yosys_separate_tests.tcl.j2", tcl_script, template_vars
             )
+            commands.add(
+                ["yosys", "-l", "yosys.log", "-p", f"'tcl {tcl_script}'"],
+                [default_target],
+                [tcl_script],
+        )
+        commands.set_default_target(f"{self.name}")
+        commands.write(os.path.join(self.work_root, "Makefile"))
