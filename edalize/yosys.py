@@ -77,18 +77,66 @@ class Yosys(Edatool):
         '''returns a list of Yosys commands to process Verilog and SystemVerilog sources'''
         unused_files = []
         file_table = []
+        includes = set()
         for f in self.edam['files']:
             # check if Verilog or SystemVerilog
             if 'file_type' not in f:
                 continue
+            if 'is_include_file' in f:
+                includes.add(os.path.dirname(f['name']))
+
             if f['file_type'].find('erilogSource') > 0:
-                file_table.append('read_systemverilog -defer {' + f['name'] + '}')
+                include_str = '-I' + ' -I'.join(includes)
+                file_table.append('read_systemverilog -debug ' + include_str + ' -defer {' + f['name'] + '}')
             else:
                 unused_files.append(f)
         if file_table:
             file_table.append('read_systemverilog -link')
         self.edam['files'] = unused_files[:]
         return file_table
+
+    def gen_script_nosynth(self, file_table, incdirs, plugins, commands):
+        commands = EdaCommands()
+        # iterate over Verilog or SystemVerilog sources
+        filelist = (f for f in self.edam['files'] if 'file_type' in f and f['file_type'].find('erilogSource') > 0)
+        targets = []
+        verilog_defines = []
+        for key, value in self.vlogdefine.items():
+            verilog_defines.append("{{{key} {value}}}".format(key=key, value=value))
+
+        verilog_params = []
+        for key, value in self.vlogparam.items():
+            if type(value) is str:
+                value = '{"' + value + '"}'
+            verilog_params.append(
+                r"chparam -set {} {} {}".format(key, self._param_value_str(value), self.toplevel)
+            )
+        plugins = ['systemverilog']
+        rtlil = self.toplevel + ".rtlil"
+        template_vars = {
+            "verilog_defines": "{" + " ".join(verilog_defines) + "}",
+            "verilog_params": "\n".join(verilog_params),
+            "file_table": "\n".join(file_table),
+            "incdirs": "",
+            "top": self.toplevel,
+            "name": self.name,
+            'plugins': "plugin -i %s \n"*len(plugins) % tuple(plugins),
+            "write_command": "write_rtlil " + rtlil,
+        }
+        tcl_script = 'yosys_nosynth.tcl'
+        self.render_template(
+            "yosys_nosynth.tcl.j2", tcl_script, template_vars
+        )
+        commands.add(
+            ["yosys", "-l", "yosys.log", "-p", f"'tcl {tcl_script}'"],
+            [rtlil],
+            [],
+            [tcl_script],
+        )
+        targets.append(rtlil)
+        commands.add([], ["rtlil"], [], targets)
+        commands.set_default_target("rtlil")
+        commands.write(os.path.join(self.work_root, "Makefile"))
 
     def gen_script(self, file_table, incdirs, plugins, commands):
         arch = self.tool_options.get('arch', None)
@@ -169,11 +217,12 @@ class Yosys(Edatool):
         commands = EdaCommands()
         additional_deps = []
         plugins = []
+        print('edam files: ' + str(self.edam['files']))
 
         self.edam['files'] = [] if not 'files' in self.edam else self.edam['files']
         file_table = []
 
-        if True: #TODO
+        if False: #TODO use this to process each file separately
             self.generate_separate_tests()
             return
 
@@ -236,7 +285,10 @@ class Yosys(Edatool):
                 print(f"Skipping file without file_type: {f}")
 
         self.edam["files"] = unused_files
-        self.gen_script(file_table, incdirs, plugins, commands)
+        if True:
+            self.gen_script_nosynth(file_table, incdirs, plugins, commands)
+        else:
+            self.gen_script(file_table, incdirs, plugins, commands)
 
     def generate_separate_tests(self):
         commands = EdaCommands()

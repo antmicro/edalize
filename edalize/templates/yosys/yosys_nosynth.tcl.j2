@@ -1,0 +1,47 @@
+yosys -import
+{{ plugins }}
+{% if plugins %}
+yosys -import
+{% endif %}
+
+proc read_files {} {
+{{ file_table }}
+}
+
+proc set_defines {} {
+{% if verilog_defines -%}
+set defines {{ verilog_defines }}
+
+foreach d ${defines} {
+  set key [lindex $d 0]
+  set val [lindex $d 1]
+  verilog_defines "-D$key=$val"
+}
+{%- endif %}
+}
+
+proc set_incdirs {} {
+{% if incdirs -%}
+verilog_defaults -add {{ incdirs }}
+{%- endif %}
+}
+
+proc set_params {} {
+{% if verilog_params -%}
+{{ verilog_params }}
+{%- endif %}
+}
+
+set top {{ top }}
+set name {{ name }}
+
+verilog_defaults -push
+verilog_defaults -add -defer
+
+set_defines
+set_incdirs
+read_files
+set_params
+{{ write_command }}
+
+verilog_defaults -pop
