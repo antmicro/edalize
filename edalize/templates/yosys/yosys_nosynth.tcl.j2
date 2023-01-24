@@ -1,0 +1,20 @@
+yosys -import
+{{ plugins }}
+{% if plugins %}
+yosys -import
+{% endif %}
+
+proc read_files {} {
+{{ file_table }}
+}
+
+set top {{ top }}
+set name {{ name }}
+
+verilog_defaults -push
+verilog_defaults -add -defer
+
+read_files
+{{ write_command }}
+
+verilog_defaults -pop
