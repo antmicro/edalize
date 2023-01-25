@@ -89,11 +89,14 @@ class Yosys(Edatool):
         if includes:
             include_str = "-I" + " -I".join(set(includes)) + " "
 
-        read_command = ""
+        read_command = []
         if file_table:
-            read_command = "read_systemverilog " + include_str + " ".join(file_table)
+            read_command = [("read_systemverilog -debug -defer " + include_str + f) for f in file_table]
 
-        return read_command
+        if read_command:
+            read_command.append("read_systemverilog -link")
+
+        return "\n".join(read_command)
 
     def gen_script_nosynth(self, read_command, plugins):
         """Generates a TCL script for Yosys to parse SystemVerilog files without synthesis"""
