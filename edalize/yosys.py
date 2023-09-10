@@ -90,7 +90,7 @@ class Yosys(Edatool):
             commands.commands += surelog.commands
             additional_deps = [self.toplevel + '.uhdm']
             self.edam['files'] = surelog.edam['files']
-            plugins += ['uhdm']
+            plugins += ['systemverilog']
         elif "frontend=sv2v" in yosys_synth_options:
             self.edam['tool_options'].update({'sv2v' : {
                         'sv2v_options' : self.tool_options.get('sv2v_options', []),
