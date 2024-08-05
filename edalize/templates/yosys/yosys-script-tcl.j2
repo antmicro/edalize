@@ -17,6 +17,8 @@ verilog_defaults -pop
 
 synth $top
 
+{{ extra_passes }}
+
 write_blif $name.blif
 write_json $name.json
 write_edif {{ edif_opts }} $name.edif

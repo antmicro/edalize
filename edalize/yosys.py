@@ -46,6 +46,9 @@ class Yosys(Edatool):
                         {'name' : 'yosys_synth_options',
                          'type' : 'String',
                          'desc' : 'Additional options for the synth command'},
+                        {'name' : 'yosys_extra_passes',
+                         'type' : 'String',
+                         'desc' : 'Additional yosys passes executed after synth'},
                         ]
                     }
 
@@ -166,7 +169,8 @@ class Yosys(Edatool):
                 'edif_opts'           : '-pvector bra' if arch=='xilinx' else '',
                 'yosys_template'      : template,
                 'name'                : self.name,
-                'plugins'             : "plugin -i %s \n"*len(plugins) % tuple(plugins)
+                'plugins'             : "plugin -i %s \n"*len(plugins) % tuple(plugins),
+                'extra_passes'        : "\n".join(self.tool_options.get('yosys_extra_passes', '')),
         }
         self.render_template('edalize_yosys_procs.tcl.j2',
                              'edalize_yosys_procs.tcl',

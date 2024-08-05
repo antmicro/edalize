@@ -101,6 +101,7 @@ class Vivado(Edatool):
                 'surelog_options' : self.tool_options.get('surelog_options', []),
                 'sv2v_options' : self.tool_options.get('sv2v_options', []),
                 'yosys_as_subtool' : True,
+                'yosys_extra_passes' : self.tool_options.get('yosys_extra_passes', []),
             }
 
             yosys = Yosys(self.edam, self.work_root)
