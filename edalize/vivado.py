@@ -10,6 +10,7 @@ import subprocess
 
 from edalize.edatool import Edatool
 from edalize.yosys import Yosys
+from edalize.synlig import Synlig
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,7 @@ class Vivado(Edatool):
                          'desc' : 'FPGA part number (e.g. xc7a35tcsg324-1)'},
                         {'name' : 'synth',
                          'type' : 'String',
-                         'desc' : 'Synthesis tool. Allowed values are vivado (default) and yosys.'},
+                         'desc' : 'Synthesis tool. Allowed values are vivado (default), yosys and synlig.'},
                         {'name' : 'pnr',
                          'type' : 'String',
                          'desc' : 'P&R tool. Allowed values are vivado (default) and none (to just run synthesis)'},
@@ -58,6 +59,7 @@ class Vivado(Edatool):
                     'lists' : []
                     }
             Edatool._extend_options(options, Yosys)
+            Edatool._extend_options(options, Synlig)
 
             return {'description' : "The Vivado backend executes Xilinx Vivado to build systems and program the FPGA",
                     'members' : options['members'],
@@ -107,6 +109,22 @@ class Vivado(Edatool):
             yosys = Yosys(self.edam, self.work_root)
             yosys.configure()
             self.files = yosys.edam['files']
+
+        if synth_tool == "synlig":
+            self.edam['tool_options']['synlig'] = {
+                'arch' : 'xilinx',
+                'output_format' : 'edif',
+                'synlig_synth_options' : self.tool_options.get('synlig_synth_options', []),
+                'synlig_read_options' : self.tool_options.get('synlig_read_options', []),
+                'surelog_options' : self.tool_options.get('surelog_options', []),
+                'sv2v_options' : self.tool_options.get('sv2v_options', []),
+                'synlig_as_subtool' : True,
+                'synlig_extra_passes' : self.tool_options.get('synlig_extra_passes', []),
+            }
+
+            synlig = Synlig(self.edam, self.work_root)
+            synlig.configure()
+            self.files = synlig.edam['files']
 
         src_files = []
         incdirs = []
@@ -198,6 +216,9 @@ class Vivado(Edatool):
         #Synthesis target
         if synth_tool == 'yosys':
             commands.commands += yosys.commands
+            commands.add([], ['synth'], edif_files)
+        elif synth_tool == 'synlig':
+            commands.commands += synlig.commands
             commands.add([], ['synth'], edif_files)
         else:
             depends = [f'{self.name}_synth.tcl', project_file]

@@ -15,6 +15,8 @@ setup(
     package_data = {'edalize' : [
         'templates/yosys/edalize_yosys_procs.tcl.j2',
         'templates/yosys/yosys-script-tcl.j2',
+        'templates/synlig/edalize_synlig_procs.tcl.j2',
+        'templates/synlig/synlig-script-tcl.j2',
         'templates/spyglass/Makefile.j2',
         'templates/spyglass/spyglass-project.prj.j2',
         'templates/spyglass/spyglass-run-goal.tcl.j2',
